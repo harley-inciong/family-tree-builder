@@ -1,6 +1,6 @@
 # 🌳 Kinship - Interactive Streamlit Family Tree Builder
 
-A modern, interactive web application built with **Streamlit** and **D3.js** for building, exploring, and sharing genealogical family trees with universal ancestral notation, collapsible branches, and spreadsheet import/export.
+A modern, interactive web application built with **Streamlit** and **D3.js** for building, exploring, and sharing genealogical family trees with universal ancestral notation, collapsible branches, and responsive full-screen visualization.
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,29 +9,30 @@ A modern, interactive web application built with **Streamlit** and **D3.js** for
 
 ## ✨ Features
 
-- **Universal Genealogical Diagram Symbols & Traces**:
+- **Universal Genealogical Diagram Symbols & Extended Notation**:
   - **■ ♂ (Square / Male)** with cerulean header
   - **● ♀ (Circle / Female)** with rose header
   - **◆ ◇ (Diamond / Other or Unknown)** with amethyst header
   - **† (Latin Cross & Diagonal Strikethrough)** for deceased relatives
-  - **══ 💍 ══** Horizontal marriage/union connection
-  - **Orthogonal descent forks** tracing parentage to children
-  - Dedicated **🧭 Universal Symbols Modal** with visual breakdown
-- **Minimal, High-Focus UI**:
-  - Uncluttered full-screen family tree canvas without distracting sidebars or tabs.
+  - **══ 💍 ══ (Marriage)**, **══ ≠ ══ (Divorced / Separated)**, and **🤝 (Partners)**
+  - **Descent Traces**: Solid (Biological), Dashed (`- - -` for Adopted with `[Name]`), Dotted (`···` for Foster/Ward), and Step relations
+  - Dedicated **🧭 Universal Symbols Modal** detailing all symbols
+- **🇵🇭 Philippine Naming System & Parent Auto-Allocation**:
+  - Dedicated data entry for **Middle Name** (Maternal maiden surname) and **Surname** (Paternal surname).
+  - Automatically detects when middle and last names are provided and offers 1-click **Auto-Allocation of Father and Mother branches** linked in marriage!
+- **Zero-Cropping Export Pipeline**:
+  - **📸 Download PNG**: Captures the entire tree canvas at 2x resolution with untruncated bounds and all connection lines preserved.
+  - **📄 Download PDF**: Vector landscape PDF generation tailored to the exact dimensions of your tree.
+- **100% Responsive UI/UX**:
+  - Full-viewport responsive layout (`96vh`) that automatically refits whenever the browser window is resized.
   - **Hover Tooltips**: Instant preview of lifespan, nickname, bio notes, and family summary on hover.
   - **Click to Edit**: Clicking any member opens an elegant slide-out **Edit & Relationship Drawer**.
 - **Family Relationship Hub**:
-  - **Parents**: Quick navigation chips to jump to parents + `+ Add Parent` (automatically pairs co-parents as spouses).
-  - **Spouses**: Quick navigation chips + `+ Add Spouse`.
-  - **Children**: Quick navigation chips + `+ Add Child`.
+  - Quick navigation chips to jump between parents, spouses, and children, with instant `+ Add` shortcuts.
 - **Retractable Lineage Pills**:
-  - Collapse any complex descendant branch into a sleek indicator badge (*"▶ Expand Lineage of [Surname]"*), reducing chart clutter.
-- **Crisp Export**:
-  - **📸 Download PNG**: High-res image with all connecting lines, union links, and symbols rendered.
-  - **📄 Download PDF**: Vector landscape PDF generation.
+  - Collapse complex descendant branches into sleek indicator badges (*"▶ Expand Lineage of [Surname]"*).
 - **Ephemeral Session Privacy**:
-  - In-browser session persistence (`sessionStorage`): preserves changes across refreshes, automatically wipes all data when you exit the browser, plus a 1-click **🧹 Clear** button.
+  - In-browser session persistence (`sessionStorage`): automatically saves your work across page refreshes and cleans up when the browser tab is closed.
 
 ---
 
@@ -64,7 +65,7 @@ Instructions for **[harley-inciong](https://github.com/harley-inciong)**:
 1. Go to [https://github.com/new](https://github.com/new).
 2. Set repository name to: **`family-tree-builder`**.
 3. Choose **Public**.
-4. Leave **"Add a README"** unchecked (we already have one).
+4. Leave **"Add a README file"** unchecked (we already have one).
 5. Click **Create repository**.
 
 ### 2. Push Local Code

@@ -16,7 +16,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   }
 
-  body {
+  html, body {
     background: #0B0F19;
     color: #F1F5F9;
     overflow: hidden;
@@ -35,20 +35,22 @@
     cursor: grabbing;
   }
 
-  /* Top Minimal Navigation Bar */
+  /* Responsive Top Navigation Bar */
   .top-navbar {
     position: absolute;
-    top: 12px;
-    left: 14px;
-    right: 14px;
+    top: 10px;
+    left: 12px;
+    right: 12px;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    background: rgba(15, 23, 42, 0.88);
+    gap: 10px;
+    background: rgba(15, 23, 42, 0.9);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 12px;
-    padding: 8px 16px;
+    padding: 8px 14px;
     z-index: 100;
     box-shadow: 0 8px 30px rgba(0,0,0,0.5);
   }
@@ -71,7 +73,7 @@
   .stats-pill {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     background: rgba(30, 41, 59, 0.7);
     padding: 4px 12px;
     border-radius: 20px;
@@ -86,21 +88,22 @@
   .nav-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .btn {
     background: #1E293B;
     border: 1px solid #334155;
     color: #F1F5F9;
-    padding: 6px 12px;
+    padding: 6px 11px;
     border-radius: 8px;
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     transition: all 0.2s ease;
   }
   .btn:hover {
@@ -117,6 +120,14 @@
   .btn-primary:hover {
     background: #1D4ED8;
   }
+  .btn-accent {
+    background: #0284C7;
+    border-color: #38BDF8;
+    color: #FFFFFF;
+  }
+  .btn-accent:hover {
+    background: #0369A1;
+  }
   .btn-danger {
     background: rgba(239, 68, 68, 0.15);
     border-color: rgba(239, 68, 68, 0.4);
@@ -132,7 +143,7 @@
     position: absolute;
     display: none;
     pointer-events: none;
-    background: rgba(15, 23, 42, 0.95);
+    background: rgba(15, 23, 42, 0.96);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     padding: 10px 14px;
@@ -141,7 +152,7 @@
     color: #E2E8F0;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     z-index: 200;
-    max-width: 260px;
+    max-width: 270px;
   }
   #member-tooltip .tt-name {
     font-weight: 700;
@@ -160,13 +171,14 @@
     line-height: 1.35;
   }
 
-  /* Slide-Out Edit & Relationship Drawer */
+  /* Responsive Slide-Out Edit & Relationship Drawer */
   #drawer {
     position: absolute;
-    top: 66px;
-    right: 14px;
-    bottom: 16px;
-    width: 350px;
+    top: 64px;
+    right: 12px;
+    bottom: 14px;
+    width: 370px;
+    max-width: calc(100vw - 24px);
     background: rgba(15, 23, 42, 0.96);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -176,7 +188,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transform: translateX(380px);
+    transform: translateX(410px);
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   }
   #drawer.open {
@@ -184,7 +196,7 @@
   }
 
   .drawer-header {
-    padding: 12px 16px;
+    padding: 12px 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
@@ -215,10 +227,10 @@
   .drawer-body {
     flex: 1;
     overflow-y: auto;
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
   }
 
   .section-label {
@@ -227,7 +239,7 @@
     color: #94A3B8;
     font-weight: 700;
     letter-spacing: 0.5px;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
 
   .rel-group {
@@ -239,15 +251,15 @@
   .rel-badges {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 6px;
+    gap: 5px;
+    margin-bottom: 5px;
   }
   .rel-chip {
     background: #0F172A;
     border: 1px solid #475569;
     color: #F1F5F9;
     font-size: 11px;
-    padding: 4px 8px;
+    padding: 3px 8px;
     border-radius: 6px;
     cursor: pointer;
     display: inline-flex;
@@ -270,7 +282,7 @@
   .form-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
   }
   .form-label {
     font-size: 11px;
@@ -281,7 +293,7 @@
     background: #0F172A;
     border: 1px solid #334155;
     color: #F8FAFC;
-    padding: 6px 10px;
+    padding: 6px 9px;
     border-radius: 6px;
     font-size: 12px;
     outline: none;
@@ -294,6 +306,11 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+  }
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
   }
 
   .modal-overlay {
@@ -316,16 +333,18 @@
     background: #1E293B;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 14px;
-    padding: 20px;
-    max-width: 480px;
-    width: 90%;
+    padding: 18px;
+    max-width: 520px;
+    width: 92%;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 20px 50px rgba(0,0,0,0.7);
   }
   .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
   .modal-title {
     font-size: 15px;
@@ -337,13 +356,13 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
   .symbol-card {
     background: #0F172A;
     border: 1px solid #334155;
     border-radius: 8px;
-    padding: 10px;
+    padding: 9px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -352,6 +371,7 @@
     font-size: 18px;
     width: 34px;
     height: 34px;
+    min-width: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -360,11 +380,11 @@
 
   .bottom-hint {
     position: absolute;
-    bottom: 12px;
-    left: 14px;
+    bottom: 10px;
+    left: 12px;
     font-size: 11px;
     color: #64748B;
-    background: rgba(15, 23, 42, 0.65);
+    background: rgba(15, 23, 42, 0.7);
     padding: 4px 10px;
     border-radius: 6px;
     pointer-events: none;
@@ -389,8 +409,8 @@
   <div class="nav-actions">
     <button class="btn btn-primary" id="btn-add-root">🌱 + Add Root</button>
     <button class="btn" id="btn-symbols">🧭 Universal Symbols</button>
-    <button class="btn" id="btn-png">📸 Download PNG</button>
-    <button class="btn" id="btn-pdf">📄 Download PDF</button>
+    <button class="btn btn-accent" id="btn-png">📸 Download PNG</button>
+    <button class="btn btn-accent" id="btn-pdf">📄 Download PDF</button>
     <button class="btn" id="btn-fit">⛶ Fit Screen</button>
     <button class="btn" id="btn-reset-sample">🔄 Sample</button>
     <button class="btn btn-danger" id="btn-clear-all" title="Wipe session for privacy">🧹 Clear</button>
@@ -441,18 +461,31 @@
       </div>
     </div>
 
+    <!-- PHILIPPINE NAMING CONVENTION AUTO-ALLOCATION BUTTON -->
+    <div id="box-auto-parents" style="display:none; background:#0F2942; border:1px solid #0284C7; border-radius:8px; padding:8px;">
+      <div style="font-size:11px; color:#38BDF8; font-weight:600; margin-bottom:4px;">🇵🇭 Auto-Link Parents</div>
+      <div style="font-size:10px; color:#94A3B8; margin-bottom:6px;">Middle name & Surname detected. Pre-allocate Father & Mother branches automatically?</div>
+      <button class="btn btn-primary" id="btn-trigger-auto-parents" style="width:100%; justify-content:center; padding:4px 8px; font-size:11px;">
+        Generate Father & Mother
+      </button>
+    </div>
+
     <!-- EDIT INFO FORM -->
     <div>
       <div class="section-label">Edit Information</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <div class="form-row">
+        <div class="form-row-3">
           <div class="form-group">
             <label class="form-label">First Name*</label>
             <input type="text" class="form-input" id="edit-fn" />
           </div>
           <div class="form-group">
+            <label class="form-label">Middle Name</label>
+            <input type="text" class="form-input" id="edit-mn" placeholder="Maternal" />
+          </div>
+          <div class="form-group">
             <label class="form-label">Surname / Last</label>
-            <input type="text" class="form-input" id="edit-ln" />
+            <input type="text" class="form-input" id="edit-ln" placeholder="Paternal" />
           </div>
         </div>
 
@@ -473,13 +506,23 @@
 
         <div class="form-row">
           <div class="form-group">
+            <label class="form-label">Relationship Type</label>
+            <select class="form-select" id="edit-relation-type">
+              <option value="biological">Biological</option>
+              <option value="adopted">Adopted ([Name] + - -)</option>
+              <option value="step">Stepchild / Stepparent</option>
+              <option value="foster">Foster / Ward (···)</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">Birth Date / Year</label>
             <input type="text" class="form-input" id="edit-birth" placeholder="e.g. 1965" />
           </div>
-          <div class="form-group">
-            <label class="form-label">Passing Date (†)</label>
-            <input type="text" class="form-input" id="edit-death" placeholder="Leave blank if living" />
-          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Passing Date (†)</label>
+          <input type="text" class="form-input" id="edit-death" placeholder="Leave blank if living" />
         </div>
 
         <div class="form-group">
@@ -487,7 +530,7 @@
           <textarea class="form-textarea" id="edit-notes" rows="2" placeholder="Profession, notes..."></textarea>
         </div>
 
-        <button class="btn btn-primary" id="btn-save-edit" style="width:100%; justify-content:center; margin-top:4px;">
+        <button class="btn btn-primary" id="btn-save-edit" style="width:100%; justify-content:center; margin-top:2px;">
           💾 Save Changes
         </button>
       </div>
@@ -508,15 +551,19 @@
       <div class="modal-title" id="add-modal-title">🌱 Add Relative</div>
       <button class="drawer-close" id="btn-close-add-modal">✕</button>
     </div>
-    <div style="display:flex; flex-direction:column; gap:10px;">
-      <div class="form-row">
+    <div style="display:flex; flex-direction:column; gap:9px;">
+      <div class="form-row-3">
         <div class="form-group">
           <label class="form-label">First Name*</label>
           <input type="text" class="form-input" id="add-fn" placeholder="Given name" />
         </div>
         <div class="form-group">
-          <label class="form-label">Surname</label>
-          <input type="text" class="form-input" id="add-ln" placeholder="Family name" />
+          <label class="form-label">Middle Name</label>
+          <input type="text" class="form-input" id="add-mn" placeholder="Maternal surname" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Surname*</label>
+          <input type="text" class="form-input" id="add-ln" placeholder="Family surname" />
         </div>
       </div>
 
@@ -537,6 +584,26 @@
 
       <div class="form-row">
         <div class="form-group">
+          <label class="form-label">Relationship / Lineage Type</label>
+          <select class="form-select" id="add-relation-type">
+            <option value="biological">Biological Lineage</option>
+            <option value="adopted">Adopted ([Name] + dashed link)</option>
+            <option value="step">Step Relation</option>
+            <option value="foster">Foster / Ward (dotted link)</option>
+          </select>
+        </div>
+        <div class="form-group" id="group-union-type" style="display:none;">
+          <label class="form-label">Union / Partner Status</label>
+          <select class="form-select" id="add-union-type">
+            <option value="married">Married / Union (═💍═)</option>
+            <option value="divorced">Divorced / Separated (═≠═)</option>
+            <option value="partners">Unmarried Partners (🤝)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
           <label class="form-label">Birth Date/Year</label>
           <input type="text" class="form-input" id="add-birth" placeholder="e.g. 1990" />
         </div>
@@ -551,7 +618,14 @@
         <textarea class="form-textarea" id="add-notes" rows="2" placeholder="Notes..."></textarea>
       </div>
 
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+      <div id="add-ph-prompt" style="display:none; background:#0F2942; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:11px; color:#38BDF8;">
+        <label style="cursor:pointer; display:flex; align-items:center; gap:6px;">
+          <input type="checkbox" id="add-check-auto-parents" checked />
+          <span>🇵🇭 Auto-generate Father & Mother branches from Middle and Surname</span>
+        </label>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
         <button class="btn" id="btn-cancel-add">Cancel</button>
         <button class="btn btn-primary" id="btn-submit-add">Add Relative</button>
       </div>
@@ -561,9 +635,9 @@
 
 <!-- UNIVERSAL SYMBOLS MODAL -->
 <div class="modal-overlay" id="symbols-modal">
-  <div class="modal-card" style="max-width:540px;">
+  <div class="modal-card" style="max-width:560px;">
     <div class="modal-header">
-      <div class="modal-title">🧭 Universal Genealogical Diagram Symbols</div>
+      <div class="modal-title">🧭 Universal Genealogical Diagram Symbols & Extended Notation</div>
       <button class="drawer-close" id="btn-close-symbols-modal">✕</button>
     </div>
 
@@ -609,19 +683,35 @@
       </div>
 
       <div class="symbol-card">
+        <div class="symbol-icon" style="background:#7F1D1D; color:#F87171;">≠</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#F87171;">Divorced / Separated</div>
+          <div style="font-size:11px; color:#94A3B8;">Broken red slash across union line</div>
+        </div>
+      </div>
+
+      <div class="symbol-card">
         <div class="symbol-icon" style="background:#1E293B; color:#38BDF8;">│↓</div>
         <div>
-          <div style="font-weight:700; font-size:13px; color:#38BDF8;">Descent Trace</div>
-          <div style="font-size:11px; color:#94A3B8;">Vertical fork linking parents to children</div>
+          <div style="font-weight:700; font-size:13px; color:#38BDF8;">Biological Descent</div>
+          <div style="font-size:11px; color:#94A3B8;">Solid vertical fork linking parents to children</div>
+        </div>
+      </div>
+
+      <div class="symbol-card">
+        <div class="symbol-icon" style="background:#1E293B; color:#A78BFA; border:1px dashed #A78BFA;">[ ]</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#A78BFA;">Adopted / Step</div>
+          <div style="font-size:11px; color:#94A3B8;">Brackets around name + dashed connector</div>
         </div>
       </div>
     </div>
 
     <div style="background:#0F172A; border:1px solid #334155; border-radius:8px; padding:10px; font-size:11px; color:#94A3B8; line-height:1.4;">
-      💡 <b>Tip:</b> Click any relative in the diagram to inspect immediate relationships, add branches, or retract lineage to save space.
+      🇵🇭 <b>Philippine Naming System:</b> Middle Name represents the maternal surname, while the last name represents the paternal surname. Setting both allows 1-click automatic pre-allocation of both parent branches!
     </div>
 
-    <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+    <div style="display:flex; justify-content:flex-end; margin-top:12px;">
       <button class="btn btn-primary" id="btn-ok-symbols">Got it</button>
     </div>
   </div>
@@ -655,15 +745,13 @@
     } catch(e) {}
   }
 
-  // Active state
   let selectedMemberId = treeState.root_id || (Object.keys(treeState.members)[0] || null);
-  let pendingAddType = null; // 'root', 'parent', 'spouse', 'child'
+  let pendingAddType = null;
 
-  // Dimensions
-  const CARD_WIDTH = 210;
-  const CARD_HEIGHT = 88;
-  const X_GAP = 36;
-  const Y_GAP = 90;
+  const CARD_WIDTH = 220;
+  const CARD_HEIGHT = 92;
+  const X_GAP = 38;
+  const Y_GAP = 94;
 
   const container = document.getElementById("canvas-container");
   const svg = d3.select("#canvas-container")
@@ -672,7 +760,6 @@
     .attr("height", "100%")
     .attr("id", "family-svg");
 
-  // Defs for deceased pattern
   const defs = svg.append("defs");
   const pat = defs.append("pattern")
     .attr("id", "stripe-deceased")
@@ -687,7 +774,6 @@
   const linksGroup = mainGroup.append("g").attr("id", "links-group");
   const nodesGroup = mainGroup.append("g").attr("id", "nodes-group");
 
-  // D3 Zoom
   const zoom = d3.zoom()
     .scaleExtent([0.15, 3.5])
     .on("zoom", (e) => {
@@ -695,7 +781,6 @@
     });
   svg.call(zoom);
 
-  // Compute Generational Maps
   function computeGenerations() {
     const genMap = {};
     const members = treeState.members;
@@ -712,7 +797,7 @@
 
     let changed = true;
     let loops = 0;
-    while (changed && loops < 12) {
+    while (changed && loops < 15) {
       changed = false;
       loops++;
       for (const [mid, m] of Object.entries(members)) {
@@ -736,7 +821,6 @@
     return genMap;
   }
 
-  // RENDER FUNCTION
   function renderTree() {
     saveSession();
     updateStats();
@@ -744,15 +828,11 @@
     const members = treeState.members || {};
     const genMap = computeGenerations();
 
-    // Clear previous elements
     linksGroup.selectAll("*").remove();
     nodesGroup.selectAll("*").remove();
 
-    if (Object.keys(members).length === 0) {
-      return;
-    }
+    if (Object.keys(members).length === 0) return;
 
-    // Node Positions Layout
     const nodePositions = {};
     const placed = new Set();
     const spousePairs = [];
@@ -768,7 +848,6 @@
       placed.add(mid);
       curX += CARD_WIDTH + X_GAP;
 
-      // Position spouses side by side
       if (m.spouses && m.spouses.length > 0) {
         m.spouses.forEach(spId => {
           if (!placed.has(spId) && members[spId]) {
@@ -784,7 +863,6 @@
         });
       }
 
-      // Position children below union if not collapsed
       if (!m.is_collapsed && m.children && m.children.length > 0) {
         let childX = nodePositions[mid].x;
         m.children.forEach(chId => {
@@ -815,37 +893,49 @@
       }
     });
 
-    // DRAW MARRIAGE / UNION LINES (INLINE ATTRIBUTES FOR EXPORT)
+    // DRAW SPOUSE MARRIAGE / UNION LINES
     spousePairs.forEach(pair => {
       const pos1 = nodePositions[pair.p1];
       const pos2 = nodePositions[pair.p2];
       if (pos1 && pos2) {
+        const m1 = members[pair.p1];
+        const unionType = (m1.spouse_unions && m1.spouse_unions[pair.p2]) || "married";
+
         const x1 = pos1.x < pos2.x ? pos1.x + CARD_WIDTH : pos1.x;
         const x2 = pos1.x < pos2.x ? pos2.x : pos2.x + CARD_WIDTH;
         const y = pos1.y + CARD_HEIGHT / 2;
+
+        const isDivorced = (unionType === 'divorced');
+        const strokeColor = isDivorced ? "#EF4444" : "#F59E0B";
+        const strokeDash = isDivorced ? "4,3" : "6,3";
 
         linksGroup.append("line")
           .attr("x1", x1)
           .attr("y1", y)
           .attr("x2", x2)
           .attr("y2", y)
-          .attr("stroke", "#F59E0B")
+          .attr("stroke", strokeColor)
           .attr("stroke-width", "3.5")
-          .attr("stroke-dasharray", "6,3")
+          .attr("stroke-dasharray", strokeDash)
           .attr("fill", "none");
 
         const midX = (x1 + x2) / 2;
+        let symbolIcon = "💍";
+        if (unionType === 'divorced') symbolIcon = "≠";
+        else if (unionType === 'partners') symbolIcon = "🤝";
+
         linksGroup.append("text")
           .attr("x", midX)
           .attr("y", y - 6)
           .attr("text-anchor", "middle")
-          .attr("font-size", "13px")
-          .attr("fill", "#F59E0B")
-          .text("💍");
-      }}
-    );
+          .attr("font-size", isDivorced ? "16px" : "13px")
+          .attr("font-weight", isDivorced ? "800" : "400")
+          .attr("fill", strokeColor)
+          .text(symbolIcon);
+      }
+    });
 
-    // DRAW PARENT-CHILD DESCENT LINES
+    // DRAW DESCENT FORKS
     const parentGroups = {};
     Object.values(members).forEach(m => {
       if (m.parents && m.parents.length > 0) {
@@ -901,13 +991,33 @@
 
       validChildren.forEach(cid => {
         const cPos = nodePositions[cid];
+        const childObj = members[cid];
         const cX = cPos.x + CARD_WIDTH / 2;
-        linksGroup.append("path")
+
+        let strokeDash = "none";
+        let strokeColor = "#64748B";
+
+        if (childObj && childObj.relation_type === 'adopted') {
+          strokeDash = "6,4";
+          strokeColor = "#A78BFA";
+        } else if (childObj && childObj.relation_type === 'foster') {
+          strokeDash = "2,3";
+          strokeColor = "#38BDF8";
+        } else if (childObj && childObj.relation_type === 'step') {
+          strokeDash = "4,4";
+          strokeColor = "#F59E0B";
+        }
+
+        const dropPath = linksGroup.append("path")
           .attr("d", `M ${cX} ${forkY} V ${cPos.y}`)
-          .attr("stroke", "#64748B")
+          .attr("stroke", strokeColor)
           .attr("stroke-width", "2.5")
           .attr("stroke-linecap", "round")
           .attr("fill", "none");
+
+        if (strokeDash !== "none") {
+          dropPath.attr("stroke-dasharray", strokeDash);
+        }
       });
     });
 
@@ -928,7 +1038,9 @@
         .on("mouseenter", (e) => {
           const b = m.birth_date || "?";
           const lifespan = m.is_living ? `b. ${b} (Living)` : `${b} — †${m.death_date || '?'}`;
-          document.getElementById("tt-name").textContent = `${m.first_name} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${m.last_name}`;
+          const mName = m.middle_name ? `${m.middle_name} ` : '';
+          const relTag = m.relation_type && m.relation_type !== 'biological' ? ` [${m.relation_type.toUpperCase()}]` : '';
+          document.getElementById("tt-name").textContent = `${m.first_name} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${mName}${m.last_name}${relTag}`;
           document.getElementById("tt-dates").textContent = lifespan;
           document.getElementById("tt-bio").textContent = m.notes || "No additional bio details.";
           tooltip.style.display = "block";
@@ -989,12 +1101,15 @@
           .text(m.last_name.toUpperCase());
       }
 
-      const nameStr = `${m.first_name || ''} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${m.last_name || ''}`.trim() || "Unnamed";
+      let midStr = m.middle_name ? `${m.middle_name.charAt(0)}. ` : "";
+      let baseName = `${m.first_name || ''} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${midStr}${m.last_name || ''}`.trim() || "Unnamed";
+      if (m.relation_type === 'adopted') baseName = `[${baseName}]`;
+
       card.append("text")
         .attr("x", 12).attr("y", 44)
         .attr("fill", "#F8FAFC")
         .attr("font-size", "13px").attr("font-weight", "600")
-        .text(nameStr.length > 22 ? nameStr.slice(0, 20) + "..." : nameStr);
+        .text(baseName.length > 24 ? baseName.slice(0, 22) + "..." : baseName);
 
       const b = m.birth_date || "?";
       const lifeStr = m.is_living ? `b. ${b} (Living)` : `${b} — †${m.death_date || '?'}`;
@@ -1006,17 +1121,33 @@
 
       const genNum = genMap[m.id] || 1;
       card.append("rect")
-        .attr("x", 12).attr("y", 69)
+        .attr("x", 12).attr("y", 70)
         .attr("width", 42).attr("height", 13)
         .attr("rx", 3).attr("ry", 3)
         .attr("fill", "#334155");
 
       card.append("text")
-        .attr("x", 33).attr("y", 79)
+        .attr("x", 33).attr("y", 80)
         .attr("text-anchor", "middle")
         .attr("fill", "#CBD5E1")
         .attr("font-size", "8.5px").attr("font-weight", "700")
         .text(`GEN ${genNum}`);
+
+      if (m.relation_type && m.relation_type !== 'biological') {
+        const badgeText = m.relation_type.toUpperCase();
+        card.append("rect")
+          .attr("x", 60).attr("y", 70)
+          .attr("width", 56).attr("height", 13)
+          .attr("rx", 3).attr("ry", 3)
+          .attr("fill", "#4C1D95");
+
+        card.append("text")
+          .attr("x", 88).attr("y", 80)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#DDD6FE")
+          .attr("font-size", "8px").attr("font-weight", "700")
+          .text(badgeText);
+      }
 
       if (m.is_collapsed) {
         const pill = nodesGroup.append("g")
@@ -1044,7 +1175,7 @@
     });
   }
 
-  function updateStats() {
+﻿  function updateStats() {
     const members = Object.values(treeState.members || {});
     document.getElementById("stat-members").textContent = members.length;
     
@@ -1069,12 +1200,21 @@
     document.getElementById("drawer-title").innerHTML = `<span>${sym} ${m.first_name} ${m.last_name}</span>`;
 
     document.getElementById("edit-fn").value = m.first_name || "";
+    document.getElementById("edit-mn").value = m.middle_name || "";
     document.getElementById("edit-ln").value = m.last_name || "";
     document.getElementById("edit-nick").value = m.nickname || "";
     document.getElementById("edit-gender").value = m.gender || "M";
+    document.getElementById("edit-relation-type").value = m.relation_type || "biological";
     document.getElementById("edit-birth").value = m.birth_date || "";
     document.getElementById("edit-death").value = m.death_date || "";
     document.getElementById("edit-notes").value = m.notes || "";
+
+    const boxAuto = document.getElementById("box-auto-parents");
+    if (m.middle_name && m.last_name && (!m.parents || m.parents.length < 2)) {
+      boxAuto.style.display = "block";
+    } else {
+      boxAuto.style.display = "none";
+    }
 
     document.getElementById("btn-toggle-collapse").textContent = m.is_collapsed ? "📂 Expand Branch" : "🗂️ Collapse Branch";
 
@@ -1111,13 +1251,72 @@
     if (!selectedMemberId || !treeState.members[selectedMemberId]) return;
     const m = treeState.members[selectedMemberId];
     m.first_name = document.getElementById("edit-fn").value.trim();
+    m.middle_name = document.getElementById("edit-mn").value.trim();
     m.last_name = document.getElementById("edit-ln").value.trim();
     m.nickname = document.getElementById("edit-nick").value.trim();
     m.gender = document.getElementById("edit-gender").value;
+    m.relation_type = document.getElementById("edit-relation-type").value;
     m.birth_date = document.getElementById("edit-birth").value.trim();
     m.death_date = document.getElementById("edit-death").value.trim();
     m.is_living = !m.death_date;
     m.notes = document.getElementById("edit-notes").value.trim();
+
+    renderTree();
+    selectMember(selectedMemberId);
+  });
+
+  // PHILIPPINE AUTO-ALLOCATE PARENTS
+  document.getElementById("btn-trigger-auto-parents").addEventListener("click", () => {
+    if (!selectedMemberId || !treeState.members[selectedMemberId]) return;
+    const m = treeState.members[selectedMemberId];
+    if (!m.middle_name || !m.last_name) return;
+
+    const fatherId = "mem_f_" + Math.random().toString(16).slice(2, 8);
+    const motherId = "mem_m_" + Math.random().toString(16).slice(2, 8);
+
+    const father = {
+      id: fatherId,
+      first_name: "Father of " + m.first_name,
+      middle_name: "",
+      last_name: m.last_name,
+      nickname: "",
+      gender: "M",
+      birth_date: "",
+      death_date: "",
+      is_living: true,
+      notes: "Paternal lineage",
+      relation_type: "biological",
+      is_collapsed: false,
+      parents: [],
+      spouses: [motherId],
+      children: [m.id],
+      spouse_unions: { [motherId]: "married" }
+    };
+
+    const mother = {
+      id: motherId,
+      first_name: "Mother of " + m.first_name,
+      middle_name: "",
+      last_name: m.middle_name,
+      nickname: "",
+      gender: "F",
+      birth_date: "",
+      death_date: "",
+      is_living: true,
+      notes: "Maternal lineage (Maiden surname)",
+      relation_type: "biological",
+      is_collapsed: false,
+      parents: [],
+      spouses: [fatherId],
+      children: [m.id],
+      spouse_unions: { [fatherId]: "married" }
+    };
+
+    treeState.members[fatherId] = father;
+    treeState.members[motherId] = mother;
+    if (!m.parents) m.parents = [];
+    if (!m.parents.includes(fatherId)) m.parents.push(fatherId);
+    if (!m.parents.includes(motherId)) m.parents.push(motherId);
 
     renderTree();
     selectMember(selectedMemberId);
@@ -1140,6 +1339,7 @@
       if (m.parents) m.parents = m.parents.filter(id => id !== mid);
       if (m.spouses) m.spouses = m.spouses.filter(id => id !== mid);
       if (m.children) m.children = m.children.filter(id => id !== mid);
+      if (m.spouse_unions) delete m.spouse_unions[mid];
     });
     delete treeState.members[mid];
 
@@ -1158,20 +1358,30 @@
     pendingAddType = type;
     const titleEl = document.getElementById("add-modal-title");
     const lnInput = document.getElementById("add-ln");
+    const mnInput = document.getElementById("add-mn");
+    const unionGroup = document.getElementById("group-union-type");
+    const phPrompt = document.getElementById("add-ph-prompt");
 
     const sel = selectedMemberId ? treeState.members[selectedMemberId] : null;
+    unionGroup.style.display = (type === 'spouse') ? "block" : "none";
+    phPrompt.style.display = (type === 'root' || type === 'child') ? "block" : "none";
+
     if (type === 'root') {
       titleEl.textContent = "🌱 Plant Ancestral Root";
       lnInput.value = "";
+      mnInput.value = "";
     } else if (type === 'child') {
       titleEl.textContent = `👶 Add Child to ${sel ? sel.first_name : ''}`;
       lnInput.value = sel ? sel.last_name : "";
+      mnInput.value = (sel && sel.gender === 'F') ? sel.last_name : (sel && sel.middle_name ? sel.middle_name : "");
     } else if (type === 'parent') {
       titleEl.textContent = `👴 Add Parent of ${sel ? sel.first_name : ''}`;
       lnInput.value = sel ? sel.last_name : "";
+      mnInput.value = "";
     } else if (type === 'spouse') {
       titleEl.textContent = `💍 Add Spouse / Partner of ${sel ? sel.first_name : ''}`;
       lnInput.value = "";
+      mnInput.value = "";
     }
 
     document.getElementById("add-fn").value = "";
@@ -1202,23 +1412,31 @@
       return;
     }
 
+    const mn = document.getElementById("add-mn").value.trim();
+    const ln = document.getElementById("add-ln").value.trim();
     const newId = "mem_" + Math.random().toString(16).slice(2, 10);
     const deathDate = document.getElementById("add-death").value.trim();
+    const relType = document.getElementById("add-relation-type").value;
+    const unionType = document.getElementById("add-union-type").value;
+    const autoGenParents = document.getElementById("add-check-auto-parents").checked;
 
     const newMember = {
       id: newId,
       first_name: fn,
-      last_name: document.getElementById("add-ln").value.trim(),
+      middle_name: mn,
+      last_name: ln,
       nickname: document.getElementById("add-nick").value.trim(),
       gender: document.getElementById("add-gender").value,
       birth_date: document.getElementById("add-birth").value.trim(),
       death_date: deathDate,
       is_living: !deathDate,
       notes: document.getElementById("add-notes").value.trim(),
+      relation_type: relType,
       is_collapsed: false,
       parents: [],
       spouses: [],
-      children: []
+      children: [],
+      spouse_unions: {}
     };
 
     const sel = selectedMemberId ? treeState.members[selectedMemberId] : null;
@@ -1240,22 +1458,74 @@
       if (!sel.parents.includes(newId)) sel.parents.push(newId);
       newMember.children.push(sel.id);
 
-      // Connect new parent with existing parents as spouses
       existingParents.forEach(epId => {
         const ep = treeState.members[epId];
         if (ep) {
           if (!ep.spouses.includes(newId)) ep.spouses.push(newId);
           if (!newMember.spouses.includes(epId)) newMember.spouses.push(epId);
+          ep.spouse_unions[newId] = "married";
+          newMember.spouse_unions[epId] = "married";
         }
       });
     } else if (pendingAddType === 'spouse' && sel) {
       if (!sel.spouses.includes(newId)) sel.spouses.push(newId);
       newMember.spouses.push(sel.id);
+      sel.spouse_unions[newId] = unionType;
+      newMember.spouse_unions[sel.id] = unionType;
     } else {
       if (!treeState.root_id) treeState.root_id = newId;
     }
 
     treeState.members[newId] = newMember;
+
+    if ((pendingAddType === 'root' || (pendingAddType === 'child' && newMember.parents.length < 2)) && autoGenParents && mn && ln) {
+      const fatherId = "mem_f_" + Math.random().toString(16).slice(2, 8);
+      const motherId = "mem_m_" + Math.random().toString(16).slice(2, 8);
+
+      const father = {
+        id: fatherId,
+        first_name: "Father of " + fn,
+        middle_name: "",
+        last_name: ln,
+        nickname: "",
+        gender: "M",
+        birth_date: "",
+        death_date: "",
+        is_living: true,
+        notes: "Paternal lineage",
+        relation_type: "biological",
+        is_collapsed: false,
+        parents: [],
+        spouses: [motherId],
+        children: [newId],
+        spouse_unions: { [motherId]: "married" }
+      };
+
+      const mother = {
+        id: motherId,
+        first_name: "Mother of " + fn,
+        middle_name: "",
+        last_name: mn,
+        nickname: "",
+        gender: "F",
+        birth_date: "",
+        death_date: "",
+        is_living: true,
+        notes: "Maternal lineage (Maiden surname)",
+        relation_type: "biological",
+        is_collapsed: false,
+        parents: [],
+        spouses: [fatherId],
+        children: [newId],
+        spouse_unions: { [fatherId]: "married" }
+      };
+
+      treeState.members[fatherId] = father;
+      treeState.members[motherId] = mother;
+      newMember.parents = [fatherId, motherId];
+      if (pendingAddType === 'root') treeState.root_id = fatherId;
+    }
+
     closeAddModal();
     renderTree();
     selectMember(newId);
@@ -1287,6 +1557,9 @@
     );
   }
   document.getElementById("btn-fit").addEventListener("click", fitView);
+  window.addEventListener("resize", () => {
+    setTimeout(fitView, 150);
+  });
 
   document.getElementById("btn-reset-sample").addEventListener("click", () => {
     if (confirm("Reset the canvas to the default 3-generation sample tree?")) {
@@ -1307,101 +1580,111 @@
     }
   });
 
-  // CRISP HIGH-RES PNG EXPORT (WITH ALL CONNECTING LINES PRESERVED)
-  document.getElementById("btn-png").addEventListener("click", () => {
+  // FULL BOUNDS EXPORT (ZERO CROPPING GUARANTEED)
+  function prepareCleanSvgForExport() {
     const svgEl = document.getElementById("family-svg");
     const bbox = mainGroup.node().getBBox();
-    if (!bbox || bbox.width === 0) return;
+    if (!bbox || bbox.width === 0 || bbox.height === 0) return null;
 
-    const pad = 50;
-    const exportW = Math.max(bbox.width + pad * 2, 800);
-    const exportH = Math.max(bbox.height + pad * 2, 600);
+    const pad = 80;
+    const minX = bbox.x - pad;
+    const minY = bbox.y - pad;
+    const totalW = bbox.width + pad * 2;
+    const totalH = bbox.height + pad * 2;
 
     const clone = svgEl.cloneNode(true);
-    clone.setAttribute("width", exportW);
-    clone.setAttribute("height", exportH);
-    clone.setAttribute("viewBox", `${bbox.x - pad} ${bbox.y - pad} ${exportW} ${exportH}`);
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    clone.setAttribute("width", totalW);
+    clone.setAttribute("height", totalH);
+    clone.setAttribute("viewBox", `${minX} ${minY} ${totalW} ${totalH}`);
+
+    // Remove zoom/pan transform from clone
+    const clonedMainGroup = clone.querySelector("#main-group");
+    if (clonedMainGroup) {
+      clonedMainGroup.removeAttribute("transform");
+    }
+
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("x", minX);
+    bg.setAttribute("y", minY);
+    bg.setAttribute("width", totalW);
+    bg.setAttribute("height", totalH);
+    bg.setAttribute("fill", "#0B0F19");
+    clone.insertBefore(bg, clone.firstChild);
 
     const serializer = new XMLSerializer();
     let svgString = serializer.serializeToString(clone);
-    if (!svgString.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
-      svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+
+    return { svgString, width: totalW, height: totalH };
+  }
+
+  // PNG EXPORT
+  document.getElementById("btn-png").addEventListener("click", () => {
+    const exportData = prepareCleanSvgForExport();
+    if (!exportData) {
+      alert("Tree is empty or cannot be exported.");
+      return;
     }
 
+    const { svgString, width, height } = exportData;
     const img = new Image();
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(svgBlob);
 
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = exportW * 2;
-      canvas.height = exportH * 2;
+      const scale = 2;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
       const ctx = canvas.getContext("2d");
-      ctx.scale(2, 2);
-      ctx.fillStyle = "#0B0F19";
-      ctx.fillRect(0, 0, exportW, exportH);
-      ctx.drawImage(img, 0, 0);
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
 
-      const pngUrl = canvas.toDataURL("image/png");
       const a = document.createElement("a");
-      a.href = pngUrl;
-      a.download = "family_tree.png";
+      a.href = canvas.toDataURL("image/png");
+      a.download = "kinship_family_tree.png";
       a.click();
     };
     img.src = url;
   });
 
-  // PDF EXPORT (CRISP LANDSCAPE PDF)
+  // PDF EXPORT
   document.getElementById("btn-pdf").addEventListener("click", () => {
-    const svgEl = document.getElementById("family-svg");
-    const bbox = mainGroup.node().getBBox();
-    if (!bbox || bbox.width === 0) return;
-
-    const pad = 50;
-    const exportW = Math.max(bbox.width + pad * 2, 800);
-    const exportH = Math.max(bbox.height + pad * 2, 600);
-
-    const clone = svgEl.cloneNode(true);
-    clone.setAttribute("width", exportW);
-    clone.setAttribute("height", exportH);
-    clone.setAttribute("viewBox", `${bbox.x - pad} ${bbox.y - pad} ${exportW} ${exportH}`);
-
-    const serializer = new XMLSerializer();
-    let svgString = serializer.serializeToString(clone);
-    if (!svgString.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
-      svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    const exportData = prepareCleanSvgForExport();
+    if (!exportData) {
+      alert("Tree is empty or cannot be exported.");
+      return;
     }
 
+    const { svgString, width, height } = exportData;
     const img = new Image();
     const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(svgBlob);
 
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = exportW * 2;
-      canvas.height = exportH * 2;
+      const scale = 2;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
       const ctx = canvas.getContext("2d");
-      ctx.scale(2, 2);
-      ctx.fillStyle = "#0B0F19";
-      ctx.fillRect(0, 0, exportW, exportH);
-      ctx.drawImage(img, 0, 0);
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new window.jspdf.jsPDF({
-        orientation: exportW > exportH ? "landscape" : "portrait",
+        orientation: width > height ? "landscape" : "portrait",
         unit: "pt",
-        format: [exportW, exportH]
+        format: [width, height]
       });
 
-      pdf.addImage(imgData, "PNG", 0, 0, exportW, exportH);
-      pdf.save("family_tree.pdf");
+      pdf.addImage(imgData, "PNG", 0, 0, width, height);
+      pdf.save("kinship_family_tree.pdf");
     };
     img.src = url;
   });
 
-  // Initial Boot
   renderTree();
   setTimeout(fitView, 120);
 

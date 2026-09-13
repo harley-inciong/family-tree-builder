@@ -14,23 +14,26 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom minimal styling: remove excessive margins and headers
+# Custom minimal styling: full viewport responsive layout
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .block-container {
-        padding-top: 0.5rem !important;
+        padding-top: 0.25rem !important;
         padding-bottom: 0rem !important;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
         max-width: 100% !important;
     }
     iframe {
+        width: 100% !important;
+        height: 96vh !important;
+        min-height: 720px !important;
         border: none !important;
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.4);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -39,5 +42,5 @@ if "tree" not in st.session_state:
     st.session_state.tree = get_sample_family_tree()
 
 # Render the self-contained interactive canvas
-tree_html = generate_family_tree_html(st.session_state.tree, height=840)
-components.html(tree_html, height=860, scrolling=False)
+tree_html = generate_family_tree_html(st.session_state.tree, height=880)
+components.html(tree_html, height=880, scrolling=False)

@@ -9,6 +9,7 @@ class FamilyMember:
         self,
         id: Optional[str] = None,
         first_name: str = "",
+        middle_name: str = "",
         last_name: str = "",
         nickname: str = "",
         gender: str = "M",  # 'M' (Male), 'F' (Female), 'O' (Other / Unknown)
@@ -16,13 +17,16 @@ class FamilyMember:
         death_date: str = "",
         is_living: bool = True,
         notes: str = "",
+        relation_type: str = "biological",  # 'biological', 'adopted', 'step', 'foster'
         is_collapsed: bool = False,
         parents: Optional[List[str]] = None,
         spouses: Optional[List[str]] = None,
         children: Optional[List[str]] = None,
+        spouse_unions: Optional[Dict[str, str]] = None,  # spouse_id -> 'married', 'divorced', 'partners'
     ):
         self.id = id if id else f"mem_{uuid.uuid4().hex[:8]}"
         self.first_name = first_name.strip()
+        self.middle_name = middle_name.strip()
         self.last_name = last_name.strip()
         self.nickname = nickname.strip()
         self.gender = gender if gender in ('M', 'F', 'O') else 'O'
@@ -30,10 +34,12 @@ class FamilyMember:
         self.death_date = death_date.strip()
         self.is_living = is_living if not death_date.strip() else False
         self.notes = notes.strip()
+        self.relation_type = relation_type if relation_type in ('biological', 'adopted', 'step', 'foster') else 'biological'
         self.is_collapsed = is_collapsed
         self.parents = parents or []
         self.spouses = spouses or []
         self.children = children or []
+        self.spouse_unions = spouse_unions or {}
 
     @property
     def display_name(self) -> str:
@@ -42,9 +48,14 @@ class FamilyMember:
             name_parts.append(self.first_name)
         if self.nickname:
             name_parts.append(f'"{self.nickname}"')
+        if self.middle_name:
+            name_parts.append(self.middle_name)
         if self.last_name:
             name_parts.append(self.last_name)
-        return " ".join(name_parts) if name_parts else "Unnamed Member"
+        base = " ".join(name_parts) if name_parts else "Unnamed Member"
+        if self.relation_type == 'adopted':
+            return f"[{base}]"
+        return base
 
     @property
     def lifespan_str(self) -> str:
@@ -68,6 +79,7 @@ class FamilyMember:
         return {
             "id": self.id,
             "first_name": self.first_name,
+            "middle_name": self.middle_name,
             "last_name": self.last_name,
             "nickname": self.nickname,
             "gender": self.gender,
@@ -75,10 +87,12 @@ class FamilyMember:
             "death_date": self.death_date,
             "is_living": self.is_living,
             "notes": self.notes,
+            "relation_type": self.relation_type,
             "is_collapsed": self.is_collapsed,
             "parents": list(self.parents),
             "spouses": list(self.spouses),
             "children": list(self.children),
+            "spouse_unions": dict(self.spouse_unions),
         }
 
     @classmethod
@@ -86,6 +100,7 @@ class FamilyMember:
         return cls(
             id=data.get("id"),
             first_name=data.get("first_name", ""),
+            middle_name=data.get("middle_name", ""),
             last_name=data.get("last_name", ""),
             nickname=data.get("nickname", ""),
             gender=data.get("gender", "O"),
@@ -93,10 +108,12 @@ class FamilyMember:
             death_date=data.get("death_date", ""),
             is_living=data.get("is_living", True),
             notes=data.get("notes", ""),
+            relation_type=data.get("relation_type", "biological"),
             is_collapsed=data.get("is_collapsed", False),
             parents=data.get("parents", []),
             spouses=data.get("spouses", []),
             children=data.get("children", []),
+            spouse_unions=data.get("spouse_unions", {}),
         )
 
 
@@ -178,7 +195,7 @@ class FamilyTree:
             
         return parent_member.id
 
-    def add_spouse(self, member_id: str, spouse_member: FamilyMember) -> str:
+    def add_spouse(self, member_id: str, spouse_member: FamilyMember, union_type: str = "married") -> str:
         member = self.get_member(member_id)
         if not member:
             raise ValueError("Member does not exist.")
@@ -187,7 +204,71 @@ class FamilyTree:
             member.spouses.append(spouse_member.id)
         if member_id not in spouse_member.spouses:
             spouse_member.spouses.append(member_id)
+        member.spouse_unions[spouse_member.id] = union_type
+        spouse_member.spouse_unions[member.id] = union_type
         return spouse_member.id
+
+    def auto_preallocate_parents_from_middle_name(self, member_id: str) -> Optional[List[str]]:
+        """
+        Philippine naming convention auto-allocation:
+        Given: Middle Name (Maternal surname) & Last Name (Paternal surname)
+        If parents do not exist, pre-allocates Father (with last_name) and Mother (with middle_name as maiden surname),
+        links them as married co-parents, and attaches them to this child.
+        """
+        member = self.get_member(member_id)
+        if not member or not member.middle_name or not member.last_name:
+            return None
+        
+        if len(member.parents) >= 2:
+            return member.parents
+
+        allocated = []
+        has_father = any(self.get_member(pid) and self.get_member(pid).gender == 'M' for pid in member.parents)
+        has_mother = any(self.get_member(pid) and self.get_member(pid).gender == 'F' for pid in member.parents)
+
+        father = None
+        mother = None
+
+        if not has_father:
+            father = FamilyMember(
+                first_name=f"Father of {member.first_name}",
+                last_name=member.last_name,
+                gender="M",
+                notes="Paternal lineage"
+            )
+            self.add_member(father)
+            if father.id not in member.parents:
+                member.parents.append(father.id)
+            father.children.append(member.id)
+            allocated.append(father.id)
+        else:
+            father = next(self.get_member(pid) for pid in member.parents if self.get_member(pid).gender == 'M')
+
+        if not has_mother:
+            mother = FamilyMember(
+                first_name=f"Mother of {member.first_name}",
+                last_name=member.middle_name,
+                gender="F",
+                notes="Maternal lineage (Maiden name)"
+            )
+            self.add_member(mother)
+            if mother.id not in member.parents:
+                member.parents.append(mother.id)
+            mother.children.append(member.id)
+            allocated.append(mother.id)
+        else:
+            mother = next(self.get_member(pid) for pid in member.parents if self.get_member(pid).gender == 'F')
+
+        # Link father and mother as spouses
+        if father and mother:
+            if mother.id not in father.spouses:
+                father.spouses.append(mother.id)
+            if father.id not in mother.spouses:
+                mother.spouses.append(father.id)
+            father.spouse_unions[mother.id] = "married"
+            mother.spouse_unions[father.id] = "married"
+
+        return allocated
 
     def delete_member(self, member_id: str) -> bool:
         if member_id not in self.members:
@@ -201,6 +282,8 @@ class FamilyTree:
                 m.parents.remove(member_id)
             if member_id in m.spouses:
                 m.spouses.remove(member_id)
+            if member_id in m.spouse_unions:
+                del m.spouse_unions[member_id]
                 
         del self.members[member_id]
         
@@ -247,7 +330,7 @@ class FamilyTree:
             return list(self.members.values())
         results = []
         for m in self.members.values():
-            haystack = f"{m.first_name} {m.nickname} {m.last_name} {m.notes} {m.birth_date} {m.death_date}".lower()
+            haystack = f"{m.first_name} {m.middle_name} {m.nickname} {m.last_name} {m.notes} {m.birth_date} {m.death_date}".lower()
             if q in haystack:
                 results.append(m)
         return results
@@ -258,7 +341,6 @@ class FamilyTree:
         if not self.members:
             return gen_map
 
-        # Helper to compute generation from known parents
         def compute_depth(mid: str, visited: set) -> int:
             if mid in visited:
                 return 1
@@ -269,7 +351,6 @@ class FamilyTree:
             parent_gens = [compute_depth(p, visited.copy()) for p in m.parents if self.get_member(p)]
             return max(parent_gens, default=0) + 1
 
-        # Iteratively settle generational levels
         changed = True
         iterations = 0
         while changed and iterations < 15:
@@ -279,18 +360,10 @@ class FamilyTree:
                 old_val = gen_map.get(mid)
                 new_val = compute_depth(mid, set())
                 
-                # Check if spouse has a higher generation to align couples
                 for sp_id in m.spouses:
                     sp_gen = gen_map.get(sp_id, 1)
                     if sp_gen > new_val:
                         new_val = sp_gen
-
-                # Also if this member is parent of someone, ensure generation is at least child - 1
-                for ch_id in m.children:
-                    ch_gen = gen_map.get(ch_id)
-                    if ch_gen and new_val < ch_gen:
-                        # parent must be strictly above child or at least consistent
-                        pass
 
                 if old_val != new_val:
                     gen_map[mid] = new_val
