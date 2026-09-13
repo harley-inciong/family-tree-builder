@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kinship Family Tree</title>
+<!-- D3.js for zoom/pan & vector layout -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- jsPDF for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  body {
+    background: #0B0F19;
+    color: #F1F5F9;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+    user-select: none;
+  }
+
+  #canvas-container {
+    width: 100vw;
+    height: 100vh;
+    cursor: grab;
+  }
+  #canvas-container:active {
+    cursor: grabbing;
+  }
+
+  /* Top Minimal Navigation Bar */
+  .top-navbar {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px 16px;
+    z-index: 100;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-logo {
+    font-size: 20px;
+  }
+  .brand-name {
+    font-weight: 700;
+    font-size: 16px;
+    color: #F8FAFC;
+    letter-spacing: 0.5px;
+  }
+
+  .stats-pill {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(30, 41, 59, 0.7);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #94A3B8;
+  }
+  .stat-highlight {
+    color: #38BDF8;
+    font-weight: 600;
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn {
+    background: #1E293B;
+    border: 1px solid #334155;
+    color: #F1F5F9;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+  .btn:hover {
+    background: #2563EB;
+    border-color: #3B82F6;
+    color: #FFFFFF;
+    transform: translateY(-1px);
+  }
+  .btn-primary {
+    background: #2563EB;
+    border-color: #3B82F6;
+    color: #FFFFFF;
+  }
+  .btn-primary:hover {
+    background: #1D4ED8;
+  }
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #FCA5A5;
+  }
+  .btn-danger:hover {
+    background: #DC2626;
+    color: #FFFFFF;
+  }
+
+  /* Hover Tooltip */
+  #member-tooltip {
+    position: absolute;
+    display: none;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #E2E8F0;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    z-index: 200;
+    max-width: 260px;
+  }
+  #member-tooltip .tt-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: #F8FAFC;
+    margin-bottom: 2px;
+  }
+  #member-tooltip .tt-dates {
+    color: #38BDF8;
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+  #member-tooltip .tt-bio {
+    color: #94A3B8;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  /* Slide-Out Edit & Relationship Drawer */
+  #drawer {
+    position: absolute;
+    top: 66px;
+    right: 14px;
+    bottom: 16px;
+    width: 350px;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.6);
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateX(380px);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  #drawer.open {
+    transform: translateX(0);
+  }
+
+  .drawer-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .drawer-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #F8FAFC;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .drawer-close {
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: 4px;
+  }
+  .drawer-close:hover {
+    color: #F8FAFC;
+    background: #1E293B;
+  }
+
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #94A3B8;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .rel-group {
+    background: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px;
+  }
+  .rel-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .rel-chip {
+    background: #0F172A;
+    border: 1px solid #475569;
+    color: #F1F5F9;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+  }
+  .rel-chip:hover {
+    border-color: #38BDF8;
+    color: #38BDF8;
+    background: #1E293B;
+  }
+  .rel-empty {
+    font-size: 11px;
+    color: #64748B;
+    font-style: italic;
+    margin-bottom: 4px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .form-label {
+    font-size: 11px;
+    color: #94A3B8;
+    font-weight: 600;
+  }
+  .form-input, .form-select, .form-textarea {
+    background: #0F172A;
+    border: 1px solid #334155;
+    color: #F8FAFC;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: #3B82F6;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(8px);
+    z-index: 300;
+    display: none;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal-card {
+    background: #1E293B;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    padding: 20px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #F8FAFC;
+  }
+
+  .symbol-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .symbol-card {
+    background: #0F172A;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .symbol-icon {
+    font-size: 18px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+  }
+
+  .bottom-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 14px;
+    font-size: 11px;
+    color: #64748B;
+    background: rgba(15, 23, 42, 0.65);
+    padding: 4px 10px;
+    border-radius: 6px;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP NAVBAR -->
+<div class="top-navbar">
+  <div class="brand">
+    <span class="brand-logo">🌳</span>
+    <span class="brand-name">Kinship</span>
+    <div class="stats-pill">
+      <div>Relatives: <span id="stat-members" class="stat-highlight">0</span></div>
+      <div>Generations: <span id="stat-gens" class="stat-highlight">0</span></div>
+      <div>Living: <span id="stat-living" style="color:#10B981; font-weight:600;">0</span></div>
+      <div>Deceased: <span id="stat-deceased" style="color:#94A3B8; font-weight:600;">0</span></div>
+    </div>
+  </div>
+
+  <div class="nav-actions">
+    <button class="btn btn-primary" id="btn-add-root">🌱 + Add Root</button>
+    <button class="btn" id="btn-symbols">🧭 Universal Symbols</button>
+    <button class="btn" id="btn-png">📸 Download PNG</button>
+    <button class="btn" id="btn-pdf">📄 Download PDF</button>
+    <button class="btn" id="btn-fit">⛶ Fit Screen</button>
+    <button class="btn" id="btn-reset-sample">🔄 Sample</button>
+    <button class="btn btn-danger" id="btn-clear-all" title="Wipe session for privacy">🧹 Clear</button>
+  </div>
+</div>
+
+<!-- SVG CANVAS -->
+<div id="canvas-container"></div>
+
+<!-- HOVER TOOLTIP -->
+<div id="member-tooltip">
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-dates" id="tt-dates"></div>
+  <div class="tt-bio" id="tt-bio"></div>
+</div>
+
+<!-- SLIDE-OUT EDIT & RELATIONSHIP DRAWER -->
+<div id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="drawer-title">
+      <span>👤 Relative Details</span>
+    </div>
+    <button class="drawer-close" id="btn-close-drawer">✕</button>
+  </div>
+
+  <div class="drawer-body">
+    <!-- RELATIONSHIPS SECTION -->
+    <div>
+      <div class="section-label">Family Connections</div>
+      <div class="rel-group">
+        <div style="margin-bottom: 8px;">
+          <div style="font-size: 11px; color:#94A3B8; font-weight:600; margin-bottom:4px;">👴 Parents:</div>
+          <div class="rel-badges" id="drawer-parents-list"></div>
+          <button class="btn" style="padding:2px 8px; font-size:11px;" id="btn-quick-add-parent">➕ Add Parent</button>
+        </div>
+
+        <div style="margin-bottom: 8px; border-top:1px solid #334155; padding-top:6px;">
+          <div style="font-size: 11px; color:#94A3B8; font-weight:600; margin-bottom:4px;">💍 Spouse / Partner:</div>
+          <div class="rel-badges" id="drawer-spouses-list"></div>
+          <button class="btn" style="padding:2px 8px; font-size:11px;" id="btn-quick-add-spouse">➕ Add Spouse</button>
+        </div>
+
+        <div style="border-top:1px solid #334155; padding-top:6px;">
+          <div style="font-size: 11px; color:#94A3B8; font-weight:600; margin-bottom:4px;">👶 Children:</div>
+          <div class="rel-badges" id="drawer-children-list"></div>
+          <button class="btn" style="padding:2px 8px; font-size:11px;" id="btn-quick-add-child">➕ Add Child</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT INFO FORM -->
+    <div>
+      <div class="section-label">Edit Information</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name*</label>
+            <input type="text" class="form-input" id="edit-fn" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Surname / Last</label>
+            <input type="text" class="form-input" id="edit-ln" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nickname</label>
+            <input type="text" class="form-input" id="edit-nick" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender / Symbol</label>
+            <select class="form-select" id="edit-gender">
+              <option value="M">Male (■ ♂)</option>
+              <option value="F">Female (● ♀)</option>
+              <option value="O">Other / Unknown (◆ ◇)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Birth Date / Year</label>
+            <input type="text" class="form-input" id="edit-birth" placeholder="e.g. 1965" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Passing Date (†)</label>
+            <input type="text" class="form-input" id="edit-death" placeholder="Leave blank if living" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Biographical Notes</label>
+          <textarea class="form-textarea" id="edit-notes" rows="2" placeholder="Profession, notes..."></textarea>
+        </div>
+
+        <button class="btn btn-primary" id="btn-save-edit" style="width:100%; justify-content:center; margin-top:4px;">
+          💾 Save Changes
+        </button>
+      </div>
+    </div>
+
+    <!-- DANGER / TREE ACTIONS -->
+    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; gap:8px;">
+      <button class="btn" id="btn-toggle-collapse" style="flex:1; justify-content:center;">🗂️ Collapse</button>
+      <button class="btn btn-danger" id="btn-delete-member" style="flex:1; justify-content:center;">🗑️ Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD RELATIVE MODAL -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title" id="add-modal-title">🌱 Add Relative</div>
+      <button class="drawer-close" id="btn-close-add-modal">✕</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name*</label>
+          <input type="text" class="form-input" id="add-fn" placeholder="Given name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Surname</label>
+          <input type="text" class="form-input" id="add-ln" placeholder="Family name" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nickname</label>
+          <input type="text" class="form-input" id="add-nick" placeholder="Optional" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender</label>
+          <select class="form-select" id="add-gender">
+            <option value="M">Male (■ ♂)</option>
+            <option value="F">Female (● ♀)</option>
+            <option value="O">Other / Unknown (◆ ◇)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Birth Date/Year</label>
+          <input type="text" class="form-input" id="add-birth" placeholder="e.g. 1990" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Passing Date (if deceased)</label>
+          <input type="text" class="form-input" id="add-death" placeholder="Leave blank if living" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Biographical Notes</label>
+        <textarea class="form-textarea" id="add-notes" rows="2" placeholder="Notes..."></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+        <button class="btn" id="btn-cancel-add">Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-add">Add Relative</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UNIVERSAL SYMBOLS MODAL -->
+<div class="modal-overlay" id="symbols-modal">
+  <div class="modal-card" style="max-width:540px;">
+    <div class="modal-header">
+      <div class="modal-title">🧭 Universal Genealogical Diagram Symbols</div>
+      <button class="drawer-close" id="btn-close-symbols-modal">✕</button>
+    </div>
+
+    <div class="symbol-grid">
+      <div class="symbol-card">
+        <div class="symbol-icon" style="background:#2563EB; color:white;">■ ♂</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#60A5FA;">Male (Square)</div>
+          <div style="font-size:11px; color:#94A3B8;">Cerulean blue header with square symbol</div>
+        </div>
+      </div>
+
+      <div class="symbol-card">
+        <div class="symbol-icon" style="background:#DB2777; color:white;">● ♀</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#F472B6;">Female (Circle)</div>
+          <div style="font-size:11px; color:#94A3B8;">Rose-pink header with circle symbol</div>
+        </div>
+      </div>
+
+      <div class="symbol-card">
+        <div class="symbol-icon" style="background:#9333EA; color:white;">◆ ◇</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#C084FC;">Other / Unknown</div>
+          <div style="font-size:11px; color:#94A3B8;">Amethyst violet diamond symbol</div>
+        </div>
+      </div>
+
+      <div class="symbol-card">
+        <div class="symbol-icon" style="background:#334155; color:#CBD5E1;">†</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#94A3B8;">Deceased</div>
+          <div style="font-size:11px; color:#94A3B8;">Latin cross † with diagonal stripe pattern</div>
+        </div>
+      </div>
+
+      <div class="symbol-card">
+        <div class="symbol-icon" style="background:#78350F; color:#FBBF24;">💍</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#FBBF24;">Marriage / Union</div>
+          <div style="font-size:11px; color:#94A3B8;">Horizontal connector linking partners</div>
+        </div>
+      </div>
+
+      <div class="symbol-card">
+        <div class="symbol-icon" style="background:#1E293B; color:#38BDF8;">│↓</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#38BDF8;">Descent Trace</div>
+          <div style="font-size:11px; color:#94A3B8;">Vertical fork linking parents to children</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#0F172A; border:1px solid #334155; border-radius:8px; padding:10px; font-size:11px; color:#94A3B8; line-height:1.4;">
+      💡 <b>Tip:</b> Click any relative in the diagram to inspect immediate relationships, add branches, or retract lineage to save space.
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+      <button class="btn btn-primary" id="btn-ok-symbols">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-hint">
+  💡 Scroll to zoom • Drag to pan • Hover for quick bio • Click card to open edit & relationship panel
+</div>
+
+﻿<script>
+  // Initial Tree Data from Python / Server
+  const initialTreeData = __TREE_JSON_PLACEHOLDER__;
+
+  // Ephemeral In-Browser Session Persistence
+  const STORAGE_KEY = "kinship_family_tree_session";
+  let treeState = null;
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      treeState = JSON.parse(saved);
+    }
+  } catch(e) {}
+
+  if (!treeState || !treeState.members || Object.keys(treeState.members).length === 0) {
+    treeState = initialTreeData;
+  }
+
+  function saveSession() {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(treeState));
+    } catch(e) {}
+  }
+
+  // Active state
+  let selectedMemberId = treeState.root_id || (Object.keys(treeState.members)[0] || null);
+  let pendingAddType = null; // 'root', 'parent', 'spouse', 'child'
+
+  // Dimensions
+  const CARD_WIDTH = 210;
+  const CARD_HEIGHT = 88;
+  const X_GAP = 36;
+  const Y_GAP = 90;
+
+  const container = document.getElementById("canvas-container");
+  const svg = d3.select("#canvas-container")
+    .append("svg")
+    .attr("width", "100%")
+    .attr("height", "100%")
+    .attr("id", "family-svg");
+
+  // Defs for deceased pattern
+  const defs = svg.append("defs");
+  const pat = defs.append("pattern")
+    .attr("id", "stripe-deceased")
+    .attr("width", 8).attr("height", 8)
+    .attr("patternUnits", "userSpaceOnUse")
+    .attr("patternTransform", "rotate(45)");
+  pat.append("line")
+    .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 8)
+    .attr("stroke", "#475569").attr("stroke-width", 1.5).attr("opacity", 0.4);
+
+  const mainGroup = svg.append("g").attr("id", "main-group");
+  const linksGroup = mainGroup.append("g").attr("id", "links-group");
+  const nodesGroup = mainGroup.append("g").attr("id", "nodes-group");
+
+  // D3 Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.15, 3.5])
+    .on("zoom", (e) => {
+      mainGroup.attr("transform", e.transform);
+    });
+  svg.call(zoom);
+
+  // Compute Generational Maps
+  function computeGenerations() {
+    const genMap = {};
+    const members = treeState.members;
+    if (!members) return genMap;
+
+    function getDepth(mid, visited = new Set()) {
+      if (visited.has(mid)) return 1;
+      visited.add(mid);
+      const m = members[mid];
+      if (!m || !m.parents || m.parents.length === 0) return 1;
+      const pGens = m.parents.map(p => getDepth(p, new Set(visited)));
+      return Math.max(...pGens, 0) + 1;
+    }
+
+    let changed = true;
+    let loops = 0;
+    while (changed && loops < 12) {
+      changed = false;
+      loops++;
+      for (const [mid, m] of Object.entries(members)) {
+        const oldG = genMap[mid];
+        let newG = getDepth(mid);
+        if (m.spouses) {
+          m.spouses.forEach(spId => {
+            const spG = genMap[spId] || 1;
+            if (spG > newG) newG = spG;
+          });
+        }
+        if (oldG !== newG) {
+          genMap[mid] = newG;
+          changed = true;
+        }
+      }
+    }
+    for (const mid of Object.keys(members)) {
+      if (!genMap[mid]) genMap[mid] = 1;
+    }
+    return genMap;
+  }
+
+  // RENDER FUNCTION
+  function renderTree() {
+    saveSession();
+    updateStats();
+
+    const members = treeState.members || {};
+    const genMap = computeGenerations();
+
+    // Clear previous elements
+    linksGroup.selectAll("*").remove();
+    nodesGroup.selectAll("*").remove();
+
+    if (Object.keys(members).length === 0) {
+      return;
+    }
+
+    // Node Positions Layout
+    const nodePositions = {};
+    const placed = new Set();
+    const spousePairs = [];
+
+    let startX = 60;
+
+    function layoutSubtree(mid, curX, gen, visited = new Set()) {
+      if (!mid || visited.has(mid) || !members[mid]) return curX;
+      visited.add(mid);
+
+      const m = members[mid];
+      nodePositions[mid] = { x: curX, y: (gen - 1) * (CARD_HEIGHT + Y_GAP) + 60 };
+      placed.add(mid);
+      curX += CARD_WIDTH + X_GAP;
+
+      // Position spouses side by side
+      if (m.spouses && m.spouses.length > 0) {
+        m.spouses.forEach(spId => {
+          if (!placed.has(spId) && members[spId]) {
+            placed.add(spId);
+            visited.add(spId);
+            nodePositions[spId] = { x: curX, y: (gen - 1) * (CARD_HEIGHT + Y_GAP) + 60 };
+            spousePairs.push({ p1: mid, p2: spId });
+            curX += CARD_WIDTH + X_GAP;
+          } else if (placed.has(spId)) {
+            const exists = spousePairs.some(pair => (pair.p1 === mid && pair.p2 === spId) || (pair.p1 === spId && pair.p2 === mid));
+            if (!exists) spousePairs.push({ p1: mid, p2: spId });
+          }
+        });
+      }
+
+      // Position children below union if not collapsed
+      if (!m.is_collapsed && m.children && m.children.length > 0) {
+        let childX = nodePositions[mid].x;
+        m.children.forEach(chId => {
+          if (!placed.has(chId)) {
+            childX = layoutSubtree(chId, childX, gen + 1, visited);
+          }
+        });
+      }
+
+      return curX;
+    }
+
+    const roots = Object.values(members).filter(m => !m.parents || m.parents.length === 0);
+    const startRoots = roots.length > 0 ? roots : Object.values(members);
+
+    startRoots.forEach(r => {
+      if (!placed.has(r.id)) {
+        startX = layoutSubtree(r.id, startX, genMap[r.id] || 1) + X_GAP * 2;
+      }
+    });
+
+    Object.values(members).forEach(m => {
+      if (!placed.has(m.id)) {
+        const gen = genMap[m.id] || 1;
+        nodePositions[m.id] = { x: startX, y: (gen - 1) * (CARD_HEIGHT + Y_GAP) + 60 };
+        placed.add(m.id);
+        startX += CARD_WIDTH + X_GAP;
+      }
+    });
+
+    // DRAW MARRIAGE / UNION LINES (INLINE ATTRIBUTES FOR EXPORT)
+    spousePairs.forEach(pair => {
+      const pos1 = nodePositions[pair.p1];
+      const pos2 = nodePositions[pair.p2];
+      if (pos1 && pos2) {
+        const x1 = pos1.x < pos2.x ? pos1.x + CARD_WIDTH : pos1.x;
+        const x2 = pos1.x < pos2.x ? pos2.x : pos2.x + CARD_WIDTH;
+        const y = pos1.y + CARD_HEIGHT / 2;
+
+        linksGroup.append("line")
+          .attr("x1", x1)
+          .attr("y1", y)
+          .attr("x2", x2)
+          .attr("y2", y)
+          .attr("stroke", "#F59E0B")
+          .attr("stroke-width", "3.5")
+          .attr("stroke-dasharray", "6,3")
+          .attr("fill", "none");
+
+        const midX = (x1 + x2) / 2;
+        linksGroup.append("text")
+          .attr("x", midX)
+          .attr("y", y - 6)
+          .attr("text-anchor", "middle")
+          .attr("font-size", "13px")
+          .attr("fill", "#F59E0B")
+          .text("💍");
+      }}
+    );
+
+    // DRAW PARENT-CHILD DESCENT LINES
+    const parentGroups = {};
+    Object.values(members).forEach(m => {
+      if (m.parents && m.parents.length > 0) {
+        const sortedParents = [...m.parents].sort().join("___");
+        if (!parentGroups[sortedParents]) parentGroups[sortedParents] = [];
+        parentGroups[sortedParents].push(m.id);
+      }
+    });
+
+    Object.entries(parentGroups).forEach(([pKey, childIds]) => {
+      const pIds = pKey.split("___");
+      let anchorX, anchorY;
+
+      if (pIds.length >= 2 && nodePositions[pIds[0]] && nodePositions[pIds[1]]) {
+        const p1 = nodePositions[pIds[0]];
+        const p2 = nodePositions[pIds[1]];
+        anchorX = (p1.x + CARD_WIDTH / 2 + p2.x + CARD_WIDTH / 2) / 2;
+        anchorY = Math.max(p1.y, p2.y) + CARD_HEIGHT / 2;
+      } else if (pIds.length === 1 && nodePositions[pIds[0]]) {
+        const p = nodePositions[pIds[0]];
+        anchorX = p.x + CARD_WIDTH / 2;
+        anchorY = p.y + CARD_HEIGHT;
+      } else {
+        return;
+      }
+
+      const isParentCollapsed = pIds.some(pid => members[pid] && members[pid].is_collapsed);
+      if (isParentCollapsed) return;
+
+      const validChildren = childIds.filter(cid => nodePositions[cid]);
+      if (validChildren.length === 0) return;
+
+      const firstChildY = nodePositions[validChildren[0]].y;
+      const forkY = anchorY + (firstChildY - anchorY) / 2;
+
+      linksGroup.append("path")
+        .attr("d", `M ${anchorX} ${anchorY} V ${forkY}`)
+        .attr("stroke", "#64748B")
+        .attr("stroke-width", "2.5")
+        .attr("stroke-linecap", "round")
+        .attr("fill", "none");
+
+      const childCenterXs = validChildren.map(cid => nodePositions[cid].x + CARD_WIDTH / 2);
+      const minCX = Math.min(anchorX, ...childCenterXs);
+      const maxCX = Math.max(anchorX, ...childCenterXs);
+
+      linksGroup.append("path")
+        .attr("d", `M ${minCX} ${forkY} H ${maxCX}`)
+        .attr("stroke", "#64748B")
+        .attr("stroke-width", "2.5")
+        .attr("stroke-linecap", "round")
+        .attr("fill", "none");
+
+      validChildren.forEach(cid => {
+        const cPos = nodePositions[cid];
+        const cX = cPos.x + CARD_WIDTH / 2;
+        linksGroup.append("path")
+          .attr("d", `M ${cX} ${forkY} V ${cPos.y}`)
+          .attr("stroke", "#64748B")
+          .attr("stroke-width", "2.5")
+          .attr("stroke-linecap", "round")
+          .attr("fill", "none");
+      });
+    });
+
+    // DRAW MEMBER CARDS
+    const tooltip = document.getElementById("member-tooltip");
+
+    Object.values(members).forEach(m => {
+      const pos = nodePositions[m.id];
+      if (!pos) return;
+
+      const isSelected = (m.id === selectedMemberId);
+
+      const card = nodesGroup.append("g")
+        .attr("class", "node-card")
+        .attr("id", `card-${m.id}`)
+        .attr("transform", `translate(${pos.x}, ${pos.y})`)
+        .style("cursor", "pointer")
+        .on("mouseenter", (e) => {
+          const b = m.birth_date || "?";
+          const lifespan = m.is_living ? `b. ${b} (Living)` : `${b} — †${m.death_date || '?'}`;
+          document.getElementById("tt-name").textContent = `${m.first_name} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${m.last_name}`;
+          document.getElementById("tt-dates").textContent = lifespan;
+          document.getElementById("tt-bio").textContent = m.notes || "No additional bio details.";
+          tooltip.style.display = "block";
+          tooltip.style.left = (e.clientX + 14) + "px";
+          tooltip.style.top = (e.clientY + 14) + "px";
+        })
+        .on("mousemove", (e) => {
+          tooltip.style.left = (e.clientX + 14) + "px";
+          tooltip.style.top = (e.clientY + 14) + "px";
+        })
+        .on("mouseleave", () => {
+          tooltip.style.display = "none";
+        })
+        .on("click", (e) => {
+          e.stopPropagation();
+          selectMember(m.id);
+        });
+
+      const strokeColor = isSelected ? "#FACC15" : (m.gender === 'M' ? '#3B82F6' : (m.gender === 'F' ? '#EC4899' : '#A855F7'));
+      const strokeWidth = isSelected ? "3.5" : "1.5";
+
+      card.append("rect")
+        .attr("width", CARD_WIDTH)
+        .attr("height", CARD_HEIGHT)
+        .attr("rx", 10).attr("ry", 10)
+        .attr("fill", "#1E293B")
+        .attr("stroke", strokeColor)
+        .attr("stroke-width", strokeWidth)
+        .style("filter", isSelected ? "drop-shadow(0 0 14px rgba(250, 204, 21, 0.8))" : "drop-shadow(0 4px 10px rgba(0,0,0,0.3))");
+
+      if (!m.is_living) {
+        card.append("rect")
+          .attr("width", CARD_WIDTH)
+          .attr("height", CARD_HEIGHT)
+          .attr("rx", 10).attr("ry", 10)
+          .attr("fill", "url(#stripe-deceased)");
+      }
+
+      const headerFill = m.gender === 'M' ? '#2563EB' : (m.gender === 'F' ? '#DB2777' : '#9333EA');
+      card.append("path")
+        .attr("d", `M 0 10 A 10 10 0 0 1 10 0 H ${CARD_WIDTH - 10} A 10 10 0 0 1 ${CARD_WIDTH} 10 V 24 H 0 Z`)
+        .attr("fill", headerFill)
+        .attr("opacity", m.is_living ? 0.95 : 0.65);
+
+      const glyph = m.gender === 'M' ? '■ ♂' : (m.gender === 'F' ? '● ♀' : '◆ ◇');
+      card.append("text")
+        .attr("x", 10).attr("y", 16)
+        .attr("fill", "#FFFFFF")
+        .attr("font-size", "11px").attr("font-weight", "700")
+        .text(glyph);
+
+      if (m.last_name) {
+        card.append("text")
+          .attr("x", CARD_WIDTH - 10).attr("y", 16)
+          .attr("text-anchor", "end")
+          .attr("fill", "#F1F5F9")
+          .attr("font-size", "10px").attr("font-weight", "600")
+          .text(m.last_name.toUpperCase());
+      }
+
+      const nameStr = `${m.first_name || ''} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${m.last_name || ''}`.trim() || "Unnamed";
+      card.append("text")
+        .attr("x", 12).attr("y", 44)
+        .attr("fill", "#F8FAFC")
+        .attr("font-size", "13px").attr("font-weight", "600")
+        .text(nameStr.length > 22 ? nameStr.slice(0, 20) + "..." : nameStr);
+
+      const b = m.birth_date || "?";
+      const lifeStr = m.is_living ? `b. ${b} (Living)` : `${b} — †${m.death_date || '?'}`;
+      card.append("text")
+        .attr("x", 12).attr("y", 62)
+        .attr("fill", m.is_living ? "#38BDF8" : "#94A3B8")
+        .attr("font-size", "11px")
+        .text(lifeStr);
+
+      const genNum = genMap[m.id] || 1;
+      card.append("rect")
+        .attr("x", 12).attr("y", 69)
+        .attr("width", 42).attr("height", 13)
+        .attr("rx", 3).attr("ry", 3)
+        .attr("fill", "#334155");
+
+      card.append("text")
+        .attr("x", 33).attr("y", 79)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#CBD5E1")
+        .attr("font-size", "8.5px").attr("font-weight", "700")
+        .text(`GEN ${genNum}`);
+
+      if (m.is_collapsed) {
+        const pill = nodesGroup.append("g")
+          .attr("transform", `translate(${pos.x + 8}, ${pos.y + CARD_HEIGHT + 10})`)
+          .style("cursor", "pointer")
+          .on("click", (e) => {
+            e.stopPropagation();
+            m.is_collapsed = false;
+            renderTree();
+          });
+
+        pill.append("rect")
+          .attr("width", CARD_WIDTH - 16).attr("height", 24)
+          .attr("rx", 12).attr("ry", 12)
+          .attr("fill", "#312E81")
+          .attr("stroke", "#818CF8").attr("stroke-width", "1.5");
+
+        pill.append("text")
+          .attr("x", (CARD_WIDTH - 16) / 2).attr("y", 15)
+          .attr("text-anchor", "middle")
+          .attr("fill", "#E0E7FF")
+          .attr("font-size", "10px").attr("font-weight", "600")
+          .text(`▶ Expand Lineage of ${m.last_name || 'Branch'}`);
+      }
+    });
+  }
+
+  function updateStats() {
+    const members = Object.values(treeState.members || {});
+    document.getElementById("stat-members").textContent = members.length;
+    
+    const genMap = computeGenerations();
+    const maxG = Math.max(...Object.values(genMap), 0);
+    document.getElementById("stat-gens").textContent = maxG;
+
+    const living = members.filter(m => m.is_living).length;
+    document.getElementById("stat-living").textContent = living;
+    document.getElementById("stat-deceased").textContent = members.length - living;
+  }
+
+  function selectMember(mid) {
+    selectedMemberId = mid;
+    const m = treeState.members[mid];
+    if (!m) return;
+
+    const drawer = document.getElementById("drawer");
+    drawer.classList.add("open");
+
+    const sym = m.gender === 'M' ? '■ ♂' : (m.gender === 'F' ? '● ♀' : '◆ ◇');
+    document.getElementById("drawer-title").innerHTML = `<span>${sym} ${m.first_name} ${m.last_name}</span>`;
+
+    document.getElementById("edit-fn").value = m.first_name || "";
+    document.getElementById("edit-ln").value = m.last_name || "";
+    document.getElementById("edit-nick").value = m.nickname || "";
+    document.getElementById("edit-gender").value = m.gender || "M";
+    document.getElementById("edit-birth").value = m.birth_date || "";
+    document.getElementById("edit-death").value = m.death_date || "";
+    document.getElementById("edit-notes").value = m.notes || "";
+
+    document.getElementById("btn-toggle-collapse").textContent = m.is_collapsed ? "📂 Expand Branch" : "🗂️ Collapse Branch";
+
+    populateRelList("drawer-parents-list", m.parents || []);
+    populateRelList("drawer-spouses-list", m.spouses || []);
+    populateRelList("drawer-children-list", m.children || []);
+
+    renderTree();
+  }
+
+  function populateRelList(containerId, memberIds) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    if (!memberIds || memberIds.length === 0) {
+      container.innerHTML = '<span class="rel-empty">None recorded</span>';
+      return;
+    }
+    memberIds.forEach(id => {
+      const mem = treeState.members[id];
+      if (mem) {
+        const sym = mem.gender === 'M' ? '♂' : (mem.gender === 'F' ? '♀' : '◇');
+        const chip = document.createElement("span");
+        chip.className = "rel-chip";
+        chip.innerHTML = `<span>${sym}</span> ${mem.first_name} ${mem.last_name}`;
+        chip.addEventListener("click", () => {
+          selectMember(id);
+        });
+        container.appendChild(chip);
+      }
+    });
+  }
+
+  document.getElementById("btn-save-edit").addEventListener("click", () => {
+    if (!selectedMemberId || !treeState.members[selectedMemberId]) return;
+    const m = treeState.members[selectedMemberId];
+    m.first_name = document.getElementById("edit-fn").value.trim();
+    m.last_name = document.getElementById("edit-ln").value.trim();
+    m.nickname = document.getElementById("edit-nick").value.trim();
+    m.gender = document.getElementById("edit-gender").value;
+    m.birth_date = document.getElementById("edit-birth").value.trim();
+    m.death_date = document.getElementById("edit-death").value.trim();
+    m.is_living = !m.death_date;
+    m.notes = document.getElementById("edit-notes").value.trim();
+
+    renderTree();
+    selectMember(selectedMemberId);
+  });
+
+  document.getElementById("btn-toggle-collapse").addEventListener("click", () => {
+    if (!selectedMemberId || !treeState.members[selectedMemberId]) return;
+    const m = treeState.members[selectedMemberId];
+    m.is_collapsed = !m.is_collapsed;
+    renderTree();
+    selectMember(selectedMemberId);
+  });
+
+  document.getElementById("btn-delete-member").addEventListener("click", () => {
+    if (!selectedMemberId) return;
+    if (!confirm("Are you sure you want to remove this relative from the family tree?")) return;
+
+    const mid = selectedMemberId;
+    Object.values(treeState.members).forEach(m => {
+      if (m.parents) m.parents = m.parents.filter(id => id !== mid);
+      if (m.spouses) m.spouses = m.spouses.filter(id => id !== mid);
+      if (m.children) m.children = m.children.filter(id => id !== mid);
+    });
+    delete treeState.members[mid];
+
+    document.getElementById("drawer").classList.remove("open");
+    selectedMemberId = Object.keys(treeState.members)[0] || null;
+    renderTree();
+  });
+
+  document.getElementById("btn-close-drawer").addEventListener("click", () => {
+    document.getElementById("drawer").classList.remove("open");
+    selectedMemberId = null;
+    renderTree();
+  });
+
+  function openAddModal(type) {
+    pendingAddType = type;
+    const titleEl = document.getElementById("add-modal-title");
+    const lnInput = document.getElementById("add-ln");
+
+    const sel = selectedMemberId ? treeState.members[selectedMemberId] : null;
+    if (type === 'root') {
+      titleEl.textContent = "🌱 Plant Ancestral Root";
+      lnInput.value = "";
+    } else if (type === 'child') {
+      titleEl.textContent = `👶 Add Child to ${sel ? sel.first_name : ''}`;
+      lnInput.value = sel ? sel.last_name : "";
+    } else if (type === 'parent') {
+      titleEl.textContent = `👴 Add Parent of ${sel ? sel.first_name : ''}`;
+      lnInput.value = sel ? sel.last_name : "";
+    } else if (type === 'spouse') {
+      titleEl.textContent = `💍 Add Spouse / Partner of ${sel ? sel.first_name : ''}`;
+      lnInput.value = "";
+    }
+
+    document.getElementById("add-fn").value = "";
+    document.getElementById("add-nick").value = "";
+    document.getElementById("add-birth").value = "";
+    document.getElementById("add-death").value = "";
+    document.getElementById("add-notes").value = "";
+
+    document.getElementById("add-modal").classList.add("active");
+  }
+
+  document.getElementById("btn-add-root").addEventListener("click", () => openAddModal('root'));
+  document.getElementById("btn-quick-add-parent").addEventListener("click", () => openAddModal('parent'));
+  document.getElementById("btn-quick-add-spouse").addEventListener("click", () => openAddModal('spouse'));
+  document.getElementById("btn-quick-add-child").addEventListener("click", () => openAddModal('child'));
+
+  function closeAddModal() {
+    document.getElementById("add-modal").classList.remove("active");
+    pendingAddType = null;
+  }
+  document.getElementById("btn-close-add-modal").addEventListener("click", closeAddModal);
+  document.getElementById("btn-cancel-add").addEventListener("click", closeAddModal);
+
+  document.getElementById("btn-submit-add").addEventListener("click", () => {
+    const fn = document.getElementById("add-fn").value.trim();
+    if (!fn) {
+      alert("First name is required.");
+      return;
+    }
+
+    const newId = "mem_" + Math.random().toString(16).slice(2, 10);
+    const deathDate = document.getElementById("add-death").value.trim();
+
+    const newMember = {
+      id: newId,
+      first_name: fn,
+      last_name: document.getElementById("add-ln").value.trim(),
+      nickname: document.getElementById("add-nick").value.trim(),
+      gender: document.getElementById("add-gender").value,
+      birth_date: document.getElementById("add-birth").value.trim(),
+      death_date: deathDate,
+      is_living: !deathDate,
+      notes: document.getElementById("add-notes").value.trim(),
+      is_collapsed: false,
+      parents: [],
+      spouses: [],
+      children: []
+    };
+
+    const sel = selectedMemberId ? treeState.members[selectedMemberId] : null;
+
+    if (pendingAddType === 'child' && sel) {
+      newMember.parents.push(sel.id);
+      if (!sel.children.includes(newId)) sel.children.push(newId);
+      if (sel.spouses && sel.spouses.length > 0) {
+        const primarySp = sel.spouses[0];
+        if (treeState.members[primarySp]) {
+          newMember.parents.push(primarySp);
+          if (!treeState.members[primarySp].children.includes(newId)) {
+            treeState.members[primarySp].children.push(newId);
+          }
+        }
+      }
+    } else if (pendingAddType === 'parent' && sel) {
+      const existingParents = [...(sel.parents || [])];
+      if (!sel.parents.includes(newId)) sel.parents.push(newId);
+      newMember.children.push(sel.id);
+
+      // Connect new parent with existing parents as spouses
+      existingParents.forEach(epId => {
+        const ep = treeState.members[epId];
+        if (ep) {
+          if (!ep.spouses.includes(newId)) ep.spouses.push(newId);
+          if (!newMember.spouses.includes(epId)) newMember.spouses.push(epId);
+        }
+      });
+    } else if (pendingAddType === 'spouse' && sel) {
+      if (!sel.spouses.includes(newId)) sel.spouses.push(newId);
+      newMember.spouses.push(sel.id);
+    } else {
+      if (!treeState.root_id) treeState.root_id = newId;
+    }
+
+    treeState.members[newId] = newMember;
+    closeAddModal();
+    renderTree();
+    selectMember(newId);
+  });
+
+  document.getElementById("btn-symbols").addEventListener("click", () => {
+    document.getElementById("symbols-modal").classList.add("active");
+  });
+  document.getElementById("btn-close-symbols-modal").addEventListener("click", () => {
+    document.getElementById("symbols-modal").classList.remove("active");
+  });
+  document.getElementById("btn-ok-symbols").addEventListener("click", () => {
+    document.getElementById("symbols-modal").classList.remove("active");
+  });
+
+  function fitView() {
+    const bbox = mainGroup.node().getBBox();
+    if (!bbox || bbox.width === 0 || bbox.height === 0) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const pad = 65;
+    const scale = Math.min((w - pad * 2) / bbox.width, (h - pad * 2) / bbox.height, 1.25);
+    const tx = (w - bbox.width * scale) / 2 - bbox.x * scale;
+    const ty = (h - bbox.height * scale) / 2 - bbox.y * scale;
+
+    svg.transition().duration(600).call(
+      zoom.transform,
+      d3.zoomIdentity.translate(tx, ty).scale(scale)
+    );
+  }
+  document.getElementById("btn-fit").addEventListener("click", fitView);
+
+  document.getElementById("btn-reset-sample").addEventListener("click", () => {
+    if (confirm("Reset the canvas to the default 3-generation sample tree?")) {
+      treeState = JSON.parse(JSON.stringify(initialTreeData));
+      selectedMemberId = treeState.root_id;
+      renderTree();
+      setTimeout(fitView, 120);
+    }
+  });
+
+  document.getElementById("btn-clear-all").addEventListener("click", () => {
+    if (confirm("Wipe all data from your browser session? This cannot be undone.")) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      treeState = { root_id: null, members: {} };
+      selectedMemberId = null;
+      document.getElementById("drawer").classList.remove("open");
+      renderTree();
+    }
+  });
+
+  // CRISP HIGH-RES PNG EXPORT (WITH ALL CONNECTING LINES PRESERVED)
+  document.getElementById("btn-png").addEventListener("click", () => {
+    const svgEl = document.getElementById("family-svg");
+    const bbox = mainGroup.node().getBBox();
+    if (!bbox || bbox.width === 0) return;
+
+    const pad = 50;
+    const exportW = Math.max(bbox.width + pad * 2, 800);
+    const exportH = Math.max(bbox.height + pad * 2, 600);
+
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute("width", exportW);
+    clone.setAttribute("height", exportH);
+    clone.setAttribute("viewBox", `${bbox.x - pad} ${bbox.y - pad} ${exportW} ${exportH}`);
+
+    const serializer = new XMLSerializer();
+    let svgString = serializer.serializeToString(clone);
+    if (!svgString.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+      svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = exportW * 2;
+      canvas.height = exportH * 2;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(2, 2);
+      ctx.fillStyle = "#0B0F19";
+      ctx.fillRect(0, 0, exportW, exportH);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      const pngUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = pngUrl;
+      a.download = "family_tree.png";
+      a.click();
+    };
+    img.src = url;
+  });
+
+  // PDF EXPORT (CRISP LANDSCAPE PDF)
+  document.getElementById("btn-pdf").addEventListener("click", () => {
+    const svgEl = document.getElementById("family-svg");
+    const bbox = mainGroup.node().getBBox();
+    if (!bbox || bbox.width === 0) return;
+
+    const pad = 50;
+    const exportW = Math.max(bbox.width + pad * 2, 800);
+    const exportH = Math.max(bbox.height + pad * 2, 600);
+
+    const clone = svgEl.cloneNode(true);
+    clone.setAttribute("width", exportW);
+    clone.setAttribute("height", exportH);
+    clone.setAttribute("viewBox", `${bbox.x - pad} ${bbox.y - pad} ${exportW} ${exportH}`);
+
+    const serializer = new XMLSerializer();
+    let svgString = serializer.serializeToString(clone);
+    if (!svgString.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+      svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+
+    const img = new Image();
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = exportW * 2;
+      canvas.height = exportH * 2;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(2, 2);
+      ctx.fillStyle = "#0B0F19";
+      ctx.fillRect(0, 0, exportW, exportH);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new window.jspdf.jsPDF({
+        orientation: exportW > exportH ? "landscape" : "portrait",
+        unit: "pt",
+        format: [exportW, exportH]
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, exportW, exportH);
+      pdf.save("family_tree.pdf");
+    };
+    img.src = url;
+  });
+
+  // Initial Boot
+  renderTree();
+  setTimeout(fitView, 120);
+
+  svg.on("click", (e) => {
+    if (e.target.tagName === 'svg' || e.target.id === 'canvas-container') {
+      document.getElementById("drawer").classList.remove("open");
+      selectedMemberId = null;
+      renderTree();
+    }
+  });
+</script>
+</body>
+</html>

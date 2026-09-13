@@ -16,21 +16,22 @@ A modern, interactive web application built with **Streamlit** and **D3.js** for
   - **† (Latin Cross & Diagonal Strikethrough)** for deceased relatives
   - **══ 💍 ══** Horizontal marriage/union connection
   - **Orthogonal descent forks** tracing parentage to children
-- **Dynamic Branch Builder**:
-  - Add **Children**, **Parents**, and **Spouses/Partners** relative to any selected focal relative.
-  - Automatic relationship linking across multiple generations.
+  - Dedicated **🧭 Universal Symbols Modal** with visual breakdown
+- **Minimal, High-Focus UI**:
+  - Uncluttered full-screen family tree canvas without distracting sidebars or tabs.
+  - **Hover Tooltips**: Instant preview of lifespan, nickname, bio notes, and family summary on hover.
+  - **Click to Edit**: Clicking any member opens an elegant slide-out **Edit & Relationship Drawer**.
+- **Family Relationship Hub**:
+  - **Parents**: Quick navigation chips to jump to parents + `+ Add Parent` (automatically pairs co-parents as spouses).
+  - **Spouses**: Quick navigation chips + `+ Add Spouse`.
+  - **Children**: Quick navigation chips + `+ Add Child`.
 - **Retractable Lineage Pills**:
-  - Click to collapse any complex descendant branch into a sleek indicator badge (*"▶ Lineage of [Surname] (N members)"*), reducing chart clutter.
-- **Interactive Visualizer**:
-  - Smooth pan and zoom (drag canvas, mousewheel zoom).
-  - **Fit Screen** and **Reset Zoom** one-click buttons.
-  - **Export High-Res PNG** or **Vector SVG** directly from the chart canvas.
-  - Real-time relative search with glow highlights.
-- **Data Portability**:
-  - **JSON Backup & Restore**: Save your entire editable tree to a `.json` file and restore it anytime.
-  - **Spreadsheet / CSV Import**: Upload a `.csv` or `.xlsx` spreadsheet to instantly transform tabular data into a family tree. Starter CSV template included.
+  - Collapse any complex descendant branch into a sleek indicator badge (*"▶ Expand Lineage of [Surname]"*), reducing chart clutter.
+- **Crisp Export**:
+  - **📸 Download PNG**: High-res image with all connecting lines, union links, and symbols rendered.
+  - **📄 Download PDF**: Vector landscape PDF generation.
 - **Ephemeral Session Privacy**:
-  - Built-in session state holds changes in your browser and automatically cleans up upon exit or by clicking **🧹 Clear All**.
+  - In-browser session persistence (`sessionStorage`): preserves changes across refreshes, automatically wipes all data when you exit the browser, plus a 1-click **🧹 Clear** button.
 
 ---
 
@@ -85,21 +86,3 @@ git push -u origin main
 4. Branch: `main`.
 5. Main file path: `app.py`.
 6. Click **Deploy!**
-
----
-
-## 📊 CSV Import Schema
-
-| Column | Description | Example |
-| :--- | :--- | :--- |
-| `id` | Unique ID | `1` or `art_1` |
-| `first_name` | Given Name | `Arthur` |
-| `last_name` | Surname / Lineage | `Pendleton` |
-| `nickname` | Informal name | `Artie` |
-| `gender` | `M` (Male), `F` (Female), `O` (Other) | `M` |
-| `birth_date`| Birth Year / Date | `1932` |
-| `death_date`| Passing Year / Date (leave empty if living) | `2015` |
-| `is_living` | `TRUE` or `FALSE` | `FALSE` |
-| `parent_ids`| Comma-separated parent IDs | `1,2` |
-| `spouse_ids`| Comma-separated spouse IDs | `2` |
-| `notes` | Biographical notes | `Clockmaker & botanist` |

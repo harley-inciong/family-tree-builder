@@ -141,6 +141,11 @@ class FamilyTree:
                 child_member.parents.append(other_parent_id)
             if child_member.id not in self.members[other_parent_id].children:
                 self.members[other_parent_id].children.append(child_member.id)
+            # Ensure parents are linked as spouses
+            if other_parent_id not in parent.spouses:
+                parent.spouses.append(other_parent_id)
+            if parent_id not in self.members[other_parent_id].spouses:
+                self.members[other_parent_id].spouses.append(parent_id)
                 
         self.add_member(child_member)
         if child_member.id not in parent.children:
@@ -152,11 +157,24 @@ class FamilyTree:
         child = self.get_member(child_id)
         if not child:
             raise ValueError("Child member does not exist.")
+        
+        # Collect existing parents before adding the new one
+        existing_parents = list(child.parents)
+        
         self.add_member(parent_member)
         if parent_member.id not in child.parents:
             child.parents.append(parent_member.id)
         if child_id not in parent_member.children:
             parent_member.children.append(child_id)
+
+        # Automatically connect new parent with existing parents as spouses
+        for ep_id in existing_parents:
+            ep = self.get_member(ep_id)
+            if ep:
+                if parent_member.id not in ep.spouses:
+                    ep.spouses.append(parent_member.id)
+                if ep_id not in parent_member.spouses:
+                    parent_member.spouses.append(ep_id)
             
         return parent_member.id
 
