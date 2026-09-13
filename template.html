@@ -35,7 +35,6 @@
     cursor: grabbing;
   }
 
-  /* Responsive Top Navigation Bar */
   .top-navbar {
     position: absolute;
     top: 10px;
@@ -138,7 +137,6 @@
     color: #FFFFFF;
   }
 
-  /* Hover Tooltip */
   #member-tooltip {
     position: absolute;
     display: none;
@@ -171,7 +169,6 @@
     line-height: 1.35;
   }
 
-  /* Responsive Slide-Out Edit & Relationship Drawer */
   #drawer {
     position: absolute;
     top: 64px;
@@ -393,7 +390,6 @@
 </head>
 <body>
 
-<!-- TOP NAVBAR -->
 <div class="top-navbar">
   <div class="brand">
     <span class="brand-logo">🌳</span>
@@ -417,17 +413,14 @@
   </div>
 </div>
 
-<!-- SVG CANVAS -->
 <div id="canvas-container"></div>
 
-<!-- HOVER TOOLTIP -->
 <div id="member-tooltip">
   <div class="tt-name" id="tt-name"></div>
   <div class="tt-dates" id="tt-dates"></div>
   <div class="tt-bio" id="tt-bio"></div>
 </div>
 
-<!-- SLIDE-OUT EDIT & RELATIONSHIP DRAWER -->
 <div id="drawer">
   <div class="drawer-header">
     <div class="drawer-title" id="drawer-title">
@@ -437,7 +430,6 @@
   </div>
 
   <div class="drawer-body">
-    <!-- RELATIONSHIPS SECTION -->
     <div>
       <div class="section-label">Family Connections</div>
       <div class="rel-group">
@@ -461,7 +453,6 @@
       </div>
     </div>
 
-    <!-- PHILIPPINE NAMING CONVENTION AUTO-ALLOCATION BUTTON -->
     <div id="box-auto-parents" style="display:none; background:#0F2942; border:1px solid #0284C7; border-radius:8px; padding:8px;">
       <div style="font-size:11px; color:#38BDF8; font-weight:600; margin-bottom:4px;">🇵🇭 Auto-Link Parents</div>
       <div style="font-size:10px; color:#94A3B8; margin-bottom:6px;">Middle name & Surname detected. Pre-allocate Father & Mother branches automatically?</div>
@@ -470,7 +461,6 @@
       </button>
     </div>
 
-    <!-- EDIT INFO FORM -->
     <div>
       <div class="section-label">Edit Information</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
@@ -536,7 +526,6 @@
       </div>
     </div>
 
-    <!-- DANGER / TREE ACTIONS -->
     <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; gap:8px;">
       <button class="btn" id="btn-toggle-collapse" style="flex:1; justify-content:center;">🗂️ Collapse</button>
       <button class="btn btn-danger" id="btn-delete-member" style="flex:1; justify-content:center;">🗑️ Delete</button>
@@ -544,7 +533,6 @@
   </div>
 </div>
 
-<!-- ADD RELATIVE MODAL -->
 <div class="modal-overlay" id="add-modal">
   <div class="modal-card">
     <div class="modal-header">
@@ -633,7 +621,6 @@
   </div>
 </div>
 
-<!-- UNIVERSAL SYMBOLS MODAL -->
 <div class="modal-overlay" id="symbols-modal">
   <div class="modal-card" style="max-width:560px;">
     <div class="modal-header">
@@ -750,8 +737,9 @@
 
   const CARD_WIDTH = 220;
   const CARD_HEIGHT = 92;
-  const X_GAP = 38;
-  const Y_GAP = 94;
+  const SPOUSE_GAP = 28;
+  const X_GAP = 36;
+  const Y_GAP = 96;
 
   const container = document.getElementById("canvas-container");
   const svg = d3.select("#canvas-container")
@@ -771,177 +759,312 @@
     .attr("stroke", "#475569").attr("stroke-width", 1.5).attr("opacity", 0.4);
 
   const mainGroup = svg.append("g").attr("id", "main-group");
+  const tiersGroup = mainGroup.append("g").attr("id", "tiers-group");
   const linksGroup = mainGroup.append("g").attr("id", "links-group");
   const nodesGroup = mainGroup.append("g").attr("id", "nodes-group");
 
   const zoom = d3.zoom()
-    .scaleExtent([0.15, 3.5])
+    .scaleExtent([0.1, 4.0])
     .on("zoom", (e) => {
       mainGroup.attr("transform", e.transform);
     });
   svg.call(zoom);
 
-  function computeGenerations() {
-    const genMap = {};
-    const members = treeState.members;
-    if (!members) return genMap;
-
-    function getDepth(mid, visited = new Set()) {
-      if (visited.has(mid)) return 1;
-      visited.add(mid);
-      const m = members[mid];
-      if (!m || !m.parents || m.parents.length === 0) return 1;
-      const pGens = m.parents.map(p => getDepth(p, new Set(visited)));
-      return Math.max(...pGens, 0) + 1;
-    }
-
-    let changed = true;
-    let loops = 0;
-    while (changed && loops < 15) {
-      changed = false;
-      loops++;
-      for (const [mid, m] of Object.entries(members)) {
-        const oldG = genMap[mid];
-        let newG = getDepth(mid);
-        if (m.spouses) {
-          m.spouses.forEach(spId => {
-            const spG = genMap[spId] || 1;
-            if (spG > newG) newG = spG;
-          });
+  // Helper to count descendants
+  function countAllDescendants(mid) {
+    let count = 0;
+    const visited = new Set();
+    function walk(id) {
+      const m = treeState.members[id];
+      if (!m) return;
+      (m.children || []).forEach(cid => {
+        if (!visited.has(cid)) {
+          visited.add(cid);
+          count++;
+          walk(cid);
         }
-        if (oldG !== newG) {
-          genMap[mid] = newG;
-          changed = true;
-        }
-      }
+      });
     }
-    for (const mid of Object.keys(members)) {
-      if (!genMap[mid]) genMap[mid] = 1;
-    }
-    return genMap;
+    walk(mid);
+    return count;
   }
 
+  // Determine hidden members due to collapsed branches
+  function getHiddenMemberIds() {
+    const hidden = new Set();
+    function hideSubtree(mid) {
+      const m = treeState.members[mid];
+      if (!m) return;
+      (m.children || []).forEach(cid => {
+        if (!hidden.has(cid)) {
+          hidden.add(cid);
+          hideSubtree(cid);
+        }
+      });
+    }
+    Object.values(treeState.members || {}).forEach(m => {
+      if (m.is_collapsed) {
+        hideSubtree(m.id);
+      }
+    });
+    return hidden;
+  }
+
+  // GLOBAL GENERATIONAL RANK COMPUTATION (UNLIMITED TIERS: GEN 1, 2, 3, 4, 5...)
+  function computeAccurateGenerations(hiddenSet) {
+    const genRanks = {};
+    const members = treeState.members || {};
+    const visibleMembers = Object.values(members).filter(m => !hiddenSet.has(m.id));
+
+    if (visibleMembers.length === 0) return genRanks;
+
+    // Default all visible to 1
+    visibleMembers.forEach(m => { genRanks[m.id] = 1; });
+
+    // Iterative constraint propagation:
+    // rank(Child) >= max(rank(Parent)) + 1
+    // rank(Spouse1) == rank(Spouse2)
+    let changed = true;
+    let iters = 0;
+    while (changed && iters < 30) {
+      changed = false;
+      iters++;
+
+      for (const m of visibleMembers) {
+        const pList = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
+        if (pList.length > 0) {
+          const maxParentRank = Math.max(...pList.map(pid => genRanks[pid] || 1));
+          const expectedChildRank = maxParentRank + 1;
+          if ((genRanks[m.id] || 1) < expectedChildRank) {
+            genRanks[m.id] = expectedChildRank;
+            changed = true;
+          }
+        }
+
+        (m.spouses || []).forEach(spId => {
+          if (!hiddenSet.has(spId) && members[spId]) {
+            const r1 = genRanks[m.id] || 1;
+            const r2 = genRanks[spId] || 1;
+            const target = Math.max(r1, r2);
+            if (r1 !== target) { genRanks[m.id] = target; changed = true; }
+            if (r2 !== target) { genRanks[spId] = target; changed = true; }
+          }
+        });
+      }
+    }
+
+    return genRanks;
+  }
+
+  // RENDER FUNCTION WITH CENTERED COUPLES, CLEAN OFFSPRING BRANCHES & TRUE COLLAPSING
   function renderTree() {
     saveSession();
     updateStats();
 
     const members = treeState.members || {};
-    const genMap = computeGenerations();
+    const hiddenSet = getHiddenMemberIds();
+    const genRanks = computeAccurateGenerations(hiddenSet);
 
+    tiersGroup.selectAll("*").remove();
     linksGroup.selectAll("*").remove();
     nodesGroup.selectAll("*").remove();
 
-    if (Object.keys(members).length === 0) return;
+    const visibleMembers = Object.values(members).filter(m => !hiddenSet.has(m.id));
+    if (visibleMembers.length === 0) return;
+
+    // RENDER GENERATIONAL RANK GUIDES (UNLIMITED)
+    const maxGen = Math.max(...Object.values(genRanks), 1);
+    for (let g = 1; g <= maxGen; g++) {
+      const rowY = (g - 1) * (CARD_HEIGHT + Y_GAP) + 80;
+      tiersGroup.append("line")
+        .attr("x1", -2000)
+        .attr("y1", rowY - 18)
+        .attr("x2", 5000)
+        .attr("y2", rowY - 18)
+        .attr("stroke", "rgba(51, 65, 85, 0.4)")
+        .attr("stroke-dasharray", "4,6")
+        .attr("stroke-width", "1");
+
+      tiersGroup.append("text")
+        .attr("x", 20)
+        .attr("y", rowY - 24)
+        .attr("fill", "rgba(148, 163, 184, 0.45)")
+        .attr("font-size", "11px")
+        .attr("font-weight", "700")
+        .text(`GENERATION ${g}`);
+    }
 
     const nodePositions = {};
     const placed = new Set();
-    const spousePairs = [];
+    const processedCouples = new Set();
 
-    let startX = 60;
+    // Helper: calculate total bounding width of a member and their descendants
+    function calculateSubtreeWidth(mid, visited = new Set()) {
+      if (!mid || visited.has(mid) || hiddenSet.has(mid) || !members[mid]) return 0;
+      visited.add(mid);
+      const m = members[mid];
 
-    function layoutSubtree(mid, curX, gen, visited = new Set()) {
-      if (!mid || visited.has(mid) || !members[mid]) return curX;
+      const visibleSpouses = (m.spouses || []).filter(sp => !hiddenSet.has(sp) && members[sp] && !visited.has(sp));
+      const coupleW = CARD_WIDTH * (1 + visibleSpouses.length) + SPOUSE_GAP * visibleSpouses.length;
+
+      if (m.is_collapsed) {
+        return coupleW;
+      }
+
+      // Collect shared children
+      const allChildren = new Set(m.children || []);
+      visibleSpouses.forEach(sp => {
+        (members[sp].children || []).forEach(cid => allChildren.add(cid));
+      });
+
+      const validChildren = Array.from(allChildren).filter(cid => !hiddenSet.has(cid) && members[cid]);
+      if (validChildren.length === 0) {
+        return coupleW;
+      }
+
+      let childrenTotalW = 0;
+      validChildren.forEach((cid, idx) => {
+        childrenTotalW += calculateSubtreeWidth(cid, new Set(visited));
+        if (idx < validChildren.length - 1) childrenTotalW += X_GAP;
+      });
+
+      return Math.max(coupleW, childrenTotalW);
+    }
+
+    // Recursive layout of a family unit
+    function placeFamilyUnit(mid, startX, visited = new Set()) {
+      if (!mid || visited.has(mid) || hiddenSet.has(mid) || !members[mid]) return startX;
       visited.add(mid);
 
       const m = members[mid];
-      nodePositions[mid] = { x: curX, y: (gen - 1) * (CARD_HEIGHT + Y_GAP) + 60 };
+      const gen = genRanks[mid] || 1;
+      const y = (gen - 1) * (CARD_HEIGHT + Y_GAP) + 80;
+
+      const visibleSpouses = (m.spouses || []).filter(sp => !hiddenSet.has(sp) && members[sp] && !visited.has(sp));
+      visibleSpouses.forEach(sp => visited.add(sp));
+
+      const coupleW = CARD_WIDTH * (1 + visibleSpouses.length) + SPOUSE_GAP * visibleSpouses.length;
+
+      // Children list
+      const allChildren = new Set(m.children || []);
+      visibleSpouses.forEach(sp => {
+        (members[sp].children || []).forEach(cid => allChildren.add(cid));
+      });
+      const validChildren = Array.from(allChildren).filter(cid => !hiddenSet.has(cid) && members[cid]);
+
+      let subtreeW = coupleW;
+      if (!m.is_collapsed && validChildren.length > 0) {
+        let cw = 0;
+        validChildren.forEach((cid, i) => {
+          cw += calculateSubtreeWidth(cid, new Set());
+          if (i < validChildren.length - 1) cw += X_GAP;
+        });
+        subtreeW = Math.max(coupleW, cw);
+      }
+
+      // Center the couple within the subtree width
+      let coupleStartX = startX + (subtreeW - coupleW) / 2;
+
+      // Place Primary Member
+      nodePositions[mid] = { x: coupleStartX, y: y };
       placed.add(mid);
-      curX += CARD_WIDTH + X_GAP;
 
-      if (m.spouses && m.spouses.length > 0) {
-        m.spouses.forEach(spId => {
-          if (!placed.has(spId) && members[spId]) {
-            placed.add(spId);
-            visited.add(spId);
-            nodePositions[spId] = { x: curX, y: (gen - 1) * (CARD_HEIGHT + Y_GAP) + 60 };
-            spousePairs.push({ p1: mid, p2: spId });
-            curX += CARD_WIDTH + X_GAP;
-          } else if (placed.has(spId)) {
-            const exists = spousePairs.some(pair => (pair.p1 === mid && pair.p2 === spId) || (pair.p1 === spId && pair.p2 === mid));
-            if (!exists) spousePairs.push({ p1: mid, p2: spId });
+      // Place Spouses side-by-side
+      let spX = coupleStartX + CARD_WIDTH + SPOUSE_GAP;
+      visibleSpouses.forEach(spId => {
+        nodePositions[spId] = { x: spX, y: y };
+        placed.add(spId);
+        spX += CARD_WIDTH + SPOUSE_GAP;
+      });
+
+      // Place Children centered under couple
+      if (!m.is_collapsed && validChildren.length > 0) {
+        let childCurX = startX;
+        validChildren.forEach(cid => {
+          if (!placed.has(cid)) {
+            const cWidth = calculateSubtreeWidth(cid, new Set());
+            placeFamilyUnit(cid, childCurX, visited);
+            childCurX += cWidth + X_GAP;
           }
         });
       }
 
-      if (!m.is_collapsed && m.children && m.children.length > 0) {
-        let childX = nodePositions[mid].x;
-        m.children.forEach(chId => {
-          if (!placed.has(chId)) {
-            childX = layoutSubtree(chId, childX, gen + 1, visited);
-          }
-        });
-      }
-
-      return curX;
+      return startX + subtreeW + X_GAP;
     }
 
-    const roots = Object.values(members).filter(m => !m.parents || m.parents.length === 0);
-    const startRoots = roots.length > 0 ? roots : Object.values(members);
+    // Place Roots
+    let curX = 60;
+    const roots = visibleMembers.filter(m => !m.parents || m.parents.length === 0);
+    const startRoots = roots.length > 0 ? roots : visibleMembers;
 
     startRoots.forEach(r => {
       if (!placed.has(r.id)) {
-        startX = layoutSubtree(r.id, startX, genMap[r.id] || 1) + X_GAP * 2;
+        curX = placeFamilyUnit(r.id, curX) + X_GAP;
       }
     });
 
-    Object.values(members).forEach(m => {
+    // Place any remaining visible members neatly
+    visibleMembers.forEach(m => {
       if (!placed.has(m.id)) {
-        const gen = genMap[m.id] || 1;
-        nodePositions[m.id] = { x: startX, y: (gen - 1) * (CARD_HEIGHT + Y_GAP) + 60 };
-        placed.add(m.id);
-        startX += CARD_WIDTH + X_GAP;
+        curX = placeFamilyUnit(m.id, curX) + X_GAP;
       }
     });
 
-    // DRAW SPOUSE MARRIAGE / UNION LINES
-    spousePairs.forEach(pair => {
-      const pos1 = nodePositions[pair.p1];
-      const pos2 = nodePositions[pair.p2];
-      if (pos1 && pos2) {
-        const m1 = members[pair.p1];
-        const unionType = (m1.spouse_unions && m1.spouse_unions[pair.p2]) || "married";
+    // DRAW MARRIAGE / UNION CONNECTIONS
+    visibleMembers.forEach(m => {
+      (m.spouses || []).forEach(spId => {
+        if (!hiddenSet.has(spId) && members[spId] && nodePositions[m.id] && nodePositions[spId]) {
+          const coupleKey = [m.id, spId].sort().join("___");
+          if (!processedCouples.has(coupleKey)) {
+            processedCouples.add(coupleKey);
 
-        const x1 = pos1.x < pos2.x ? pos1.x + CARD_WIDTH : pos1.x;
-        const x2 = pos1.x < pos2.x ? pos2.x : pos2.x + CARD_WIDTH;
-        const y = pos1.y + CARD_HEIGHT / 2;
+            const pos1 = nodePositions[m.id];
+            const pos2 = nodePositions[spId];
+            const x1 = pos1.x < pos2.x ? pos1.x + CARD_WIDTH : pos1.x;
+            const x2 = pos1.x < pos2.x ? pos2.x : pos2.x + CARD_WIDTH;
+            const my = pos1.y + CARD_HEIGHT / 2;
 
-        const isDivorced = (unionType === 'divorced');
-        const strokeColor = isDivorced ? "#EF4444" : "#F59E0B";
-        const strokeDash = isDivorced ? "4,3" : "6,3";
+            const unionType = (m.spouse_unions && m.spouse_unions[spId]) || "married";
+            const isDivorced = (unionType === 'divorced');
+            const strokeColor = isDivorced ? "#EF4444" : "#F59E0B";
+            const strokeDash = isDivorced ? "4,3" : "6,3";
 
-        linksGroup.append("line")
-          .attr("x1", x1)
-          .attr("y1", y)
-          .attr("x2", x2)
-          .attr("y2", y)
-          .attr("stroke", strokeColor)
-          .attr("stroke-width", "3.5")
-          .attr("stroke-dasharray", strokeDash)
-          .attr("fill", "none");
+            linksGroup.append("line")
+              .attr("x1", x1)
+              .attr("y1", my)
+              .attr("x2", x2)
+              .attr("y2", my)
+              .attr("stroke", strokeColor)
+              .attr("stroke-width", "3.5")
+              .attr("stroke-dasharray", strokeDash)
+              .attr("fill", "none");
 
-        const midX = (x1 + x2) / 2;
-        let symbolIcon = "💍";
-        if (unionType === 'divorced') symbolIcon = "≠";
-        else if (unionType === 'partners') symbolIcon = "🤝";
+            const midX = (x1 + x2) / 2;
+            let symbolIcon = "💍";
+            if (unionType === 'divorced') symbolIcon = "≠";
+            else if (unionType === 'partners') symbolIcon = "🤝";
 
-        linksGroup.append("text")
-          .attr("x", midX)
-          .attr("y", y - 6)
-          .attr("text-anchor", "middle")
-          .attr("font-size", isDivorced ? "16px" : "13px")
-          .attr("font-weight", isDivorced ? "800" : "400")
-          .attr("fill", strokeColor)
-          .text(symbolIcon);
-      }
+            linksGroup.append("text")
+              .attr("x", midX)
+              .attr("y", my - 6)
+              .attr("text-anchor", "middle")
+              .attr("font-size", isDivorced ? "16px" : "13px")
+              .attr("font-weight", isDivorced ? "800" : "400")
+              .attr("fill", strokeColor)
+              .text(symbolIcon);
+          }
+        }
+      });
     });
 
-    // DRAW DESCENT FORKS
+    // DRAW UNIFIED DESCENT FORKS TO CHILDREN
     const parentGroups = {};
-    Object.values(members).forEach(m => {
-      if (m.parents && m.parents.length > 0) {
-        const sortedParents = [...m.parents].sort().join("___");
-        if (!parentGroups[sortedParents]) parentGroups[sortedParents] = [];
-        parentGroups[sortedParents].push(m.id);
+    visibleMembers.forEach(m => {
+      const vParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
+      if (vParents.length > 0) {
+        const sortedP = [...vParents].sort().join("___");
+        if (!parentGroups[sortedP]) parentGroups[sortedP] = [];
+        parentGroups[sortedP].push(m.id);
       }
     });
 
@@ -962,15 +1085,13 @@
         return;
       }
 
-      const isParentCollapsed = pIds.some(pid => members[pid] && members[pid].is_collapsed);
-      if (isParentCollapsed) return;
-
       const validChildren = childIds.filter(cid => nodePositions[cid]);
       if (validChildren.length === 0) return;
 
       const firstChildY = nodePositions[validChildren[0]].y;
       const forkY = anchorY + (firstChildY - anchorY) / 2;
 
+      // Stem from parents down to fork level
       linksGroup.append("path")
         .attr("d", `M ${anchorX} ${anchorY} V ${forkY}`)
         .attr("stroke", "#64748B")
@@ -978,6 +1099,7 @@
         .attr("stroke-linecap", "round")
         .attr("fill", "none");
 
+      // Horizontal descent bar spanning children
       const childCenterXs = validChildren.map(cid => nodePositions[cid].x + CARD_WIDTH / 2);
       const minCX = Math.min(anchorX, ...childCenterXs);
       const maxCX = Math.max(anchorX, ...childCenterXs);
@@ -989,6 +1111,7 @@
         .attr("stroke-linecap", "round")
         .attr("fill", "none");
 
+      // Vertical drop into each child
       validChildren.forEach(cid => {
         const cPos = nodePositions[cid];
         const childObj = members[cid];
@@ -1021,10 +1144,10 @@
       });
     });
 
-    // DRAW MEMBER CARDS
+    // DRAW VISIBLE MEMBER CARDS
     const tooltip = document.getElementById("member-tooltip");
 
-    Object.values(members).forEach(m => {
+    visibleMembers.forEach(m => {
       const pos = nodePositions[m.id];
       if (!pos) return;
 
@@ -1119,7 +1242,7 @@
         .attr("font-size", "11px")
         .text(lifeStr);
 
-      const genNum = genMap[m.id] || 1;
+      const genNum = genRanks[m.id] || 1;
       card.append("rect")
         .attr("x", 12).attr("y", 70)
         .attr("width", 42).attr("height", 13)
@@ -1149,7 +1272,9 @@
           .text(badgeText);
       }
 
+      // TRUE COLLAPSE PILL (ACTUALLY COLLAPSES AND CONTRACTS)
       if (m.is_collapsed) {
+        const hiddenCount = countAllDescendants(m.id);
         const pill = nodesGroup.append("g")
           .attr("transform", `translate(${pos.x + 8}, ${pos.y + CARD_HEIGHT + 10})`)
           .style("cursor", "pointer")
@@ -1160,17 +1285,17 @@
           });
 
         pill.append("rect")
-          .attr("width", CARD_WIDTH - 16).attr("height", 24)
-          .attr("rx", 12).attr("ry", 12)
+          .attr("width", CARD_WIDTH - 16).attr("height", 26)
+          .attr("rx", 13).attr("ry", 13)
           .attr("fill", "#312E81")
           .attr("stroke", "#818CF8").attr("stroke-width", "1.5");
 
         pill.append("text")
-          .attr("x", (CARD_WIDTH - 16) / 2).attr("y", 15)
+          .attr("x", (CARD_WIDTH - 16) / 2).attr("y", 17)
           .attr("text-anchor", "middle")
           .attr("fill", "#E0E7FF")
           .attr("font-size", "10px").attr("font-weight", "600")
-          .text(`▶ Expand Lineage of ${m.last_name || 'Branch'}`);
+          .text(`▶ Expand Lineage (${hiddenCount} hidden)`);
       }
     });
   }
@@ -1179,8 +1304,9 @@
     const members = Object.values(treeState.members || {});
     document.getElementById("stat-members").textContent = members.length;
     
-    const genMap = computeGenerations();
-    const maxG = Math.max(...Object.values(genMap), 0);
+    const hiddenSet = getHiddenMemberIds();
+    const genRanks = computeAccurateGenerations(hiddenSet);
+    const maxG = Math.max(...Object.values(genRanks), 0);
     document.getElementById("stat-gens").textContent = maxG;
 
     const living = members.filter(m => m.is_living).length;
