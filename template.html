@@ -137,6 +137,84 @@
     color: #FFFFFF;
   }
 
+  /* Floating Side Toolbar for Undo, Redo, Save Progress & Fit */
+  .side-floating-toolbar {
+    position: absolute;
+    top: 76px;
+    left: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 8px 6px;
+    z-index: 120;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+  }
+  .side-tool-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #CBD5E1;
+    padding: 7px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.18s ease;
+  }
+  .side-tool-btn:hover:not(:disabled) {
+    background: #1E293B;
+    border-color: #38BDF8;
+    color: #38BDF8;
+    transform: translateY(-1px);
+  }
+  .side-tool-btn:disabled {
+    opacity: 0.32;
+    cursor: not-allowed;
+  }
+  .side-tool-btn .tool-icon {
+    font-size: 15px;
+  }
+  .side-tool-btn .tool-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  .side-tool-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 3px 2px;
+  }
+
+  /* Toast Notification */
+  .toast-notification {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(12px);
+    border: 1px solid #38BDF8;
+    color: #F8FAFC;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.65);
+    z-index: 400;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(14px);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .toast-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   #member-tooltip {
     position: absolute;
     display: none;
@@ -174,7 +252,7 @@
     top: 64px;
     right: 12px;
     bottom: 14px;
-    width: 370px;
+    width: 380px;
     max-width: calc(100vw - 24px);
     background: rgba(15, 23, 42, 0.96);
     backdrop-filter: blur(16px);
@@ -185,7 +263,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transform: translateX(410px);
+    transform: translateX(420px);
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   }
   #drawer.open {
@@ -286,7 +364,7 @@
     color: #94A3B8;
     font-weight: 600;
   }
-  .form-input, .form-select, .form-textarea {
+  .form-input, .form-select {
     background: #0F172A;
     border: 1px solid #334155;
     color: #F8FAFC;
@@ -296,6 +374,20 @@
     outline: none;
     transition: border-color 0.2s;
   }
+  .form-textarea {
+    background: #0F172A;
+    border: 1px solid #334155;
+    color: #F8FAFC;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+    min-height: 58px;
+    max-height: 220px;
+    width: 100%;
+  }
   .form-input:focus, .form-select:focus, .form-textarea:focus {
     border-color: #3B82F6;
   }
@@ -303,11 +395,6 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-  }
-  .form-row-3 {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
   }
 
   .modal-overlay {
@@ -331,7 +418,7 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 14px;
     padding: 18px;
-    max-width: 520px;
+    max-width: 500px;
     width: 92%;
     max-height: 90vh;
     overflow-y: auto;
@@ -378,10 +465,10 @@
   .bottom-hint {
     position: absolute;
     bottom: 10px;
-    left: 12px;
+    left: 78px;
     font-size: 11px;
     color: #64748B;
-    background: rgba(15, 23, 42, 0.7);
+    background: rgba(15, 23, 42, 0.75);
     padding: 4px 10px;
     border-radius: 6px;
     pointer-events: none;
@@ -407,11 +494,34 @@
     <button class="btn" id="btn-symbols">🧭 Universal Symbols</button>
     <button class="btn btn-accent" id="btn-png">📸 Download PNG</button>
     <button class="btn btn-accent" id="btn-pdf">📄 Download PDF</button>
-    <button class="btn" id="btn-fit">⛶ Fit Screen</button>
     <button class="btn" id="btn-reset-sample">🔄 Sample</button>
     <button class="btn btn-danger" id="btn-clear-all" title="Wipe session for privacy">🧹 Clear</button>
   </div>
 </div>
+
+<!-- FLOATING SIDE TOOLBAR (UNDO, REDO, SAVE PROGRESS, FIT SCREEN) -->
+<div class="side-floating-toolbar">
+  <button class="side-tool-btn" id="side-btn-undo" title="Undo (Ctrl+Z)" disabled>
+    <span class="tool-icon">↩️</span>
+    <span class="tool-label">Undo</span>
+  </button>
+  <button class="side-tool-btn" id="side-btn-redo" title="Redo (Ctrl+Y)" disabled>
+    <span class="tool-icon">↪️</span>
+    <span class="tool-label">Redo</span>
+  </button>
+  <div class="side-tool-divider"></div>
+  <button class="side-tool-btn" id="side-btn-save" title="Save Progress to Storage (Ctrl+S)">
+    <span class="tool-icon">💾</span>
+    <span class="tool-label">Save</span>
+  </button>
+  <button class="side-tool-btn" id="side-btn-fit" title="Fit Canvas (Space)">
+    <span class="tool-icon">⛶</span>
+    <span class="tool-label">Fit</span>
+  </button>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast-notify" class="toast-notification"></div>
 
 <div id="canvas-container"></div>
 
@@ -421,6 +531,7 @@
   <div class="tt-bio" id="tt-bio"></div>
 </div>
 
+<!-- SLIDE-OUT DRAWER -->
 <div id="drawer">
   <div class="drawer-header">
     <div class="drawer-title" id="drawer-title">
@@ -464,7 +575,8 @@
     <div>
       <div class="section-label">Edit Information</div>
       <div style="display:flex; flex-direction:column; gap:8px;">
-        <div class="form-row-3">
+        <!-- Row 1: First Name & Middle Name (2 columns) -->
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">First Name*</label>
             <input type="text" class="form-input" id="edit-fn" />
@@ -473,17 +585,22 @@
             <label class="form-label">Middle Name</label>
             <input type="text" class="form-input" id="edit-mn" placeholder="Maternal" />
           </div>
-          <div class="form-group">
-            <label class="form-label">Surname / Last</label>
-            <input type="text" class="form-input" id="edit-ln" placeholder="Paternal" />
-          </div>
         </div>
 
+        <!-- Row 2: Surname and Nickname (2 columns) -->
         <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Surname / Last*</label>
+            <input type="text" class="form-input" id="edit-ln" placeholder="Paternal" />
+          </div>
           <div class="form-group">
             <label class="form-label">Nickname</label>
             <input type="text" class="form-input" id="edit-nick" />
           </div>
+        </div>
+
+        <!-- Row 3: Gender & Relationship Type (2 columns) -->
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Gender / Symbol</label>
             <select class="form-select" id="edit-gender">
@@ -492,9 +609,6 @@
               <option value="O">Other / Unknown (◆ ◇)</option>
             </select>
           </div>
-        </div>
-
-        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Relationship Type</label>
             <select class="form-select" id="edit-relation-type">
@@ -504,19 +618,23 @@
               <option value="foster">Foster / Ward (···)</option>
             </select>
           </div>
+        </div>
+
+        <!-- Row 4: Birth Date and Passing Date (2 columns) -->
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Birth Date / Year</label>
             <input type="text" class="form-input" id="edit-birth" placeholder="e.g. 1965" />
           </div>
+          <div class="form-group">
+            <label class="form-label">Passing Date (†)</label>
+            <input type="text" class="form-input" id="edit-death" placeholder="Leave blank if living" />
+          </div>
         </div>
 
+        <!-- Row 5: Bio Notes (Expandable Vertically Only) -->
         <div class="form-group">
-          <label class="form-label">Passing Date (†)</label>
-          <input type="text" class="form-input" id="edit-death" placeholder="Leave blank if living" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Biographical Notes</label>
+          <label class="form-label">Biographical Notes (Expandable Vertically)</label>
           <textarea class="form-textarea" id="edit-notes" rows="2" placeholder="Profession, notes..."></textarea>
         </div>
 
@@ -533,6 +651,7 @@
   </div>
 </div>
 
+<!-- ADD RELATIVE MODAL (STRICT 2-COLUMN ORDER) -->
 <div class="modal-overlay" id="add-modal">
   <div class="modal-card">
     <div class="modal-header">
@@ -540,7 +659,8 @@
       <button class="drawer-close" id="btn-close-add-modal">✕</button>
     </div>
     <div style="display:flex; flex-direction:column; gap:9px;">
-      <div class="form-row-3">
+      <!-- Row 1: First Name & Middle Name (2 columns) -->
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label">First Name*</label>
           <input type="text" class="form-input" id="add-fn" placeholder="Given name" />
@@ -549,17 +669,22 @@
           <label class="form-label">Middle Name</label>
           <input type="text" class="form-input" id="add-mn" placeholder="Maternal surname" />
         </div>
+      </div>
+
+      <!-- Row 2: Surname and Nickname (2 columns) -->
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Surname*</label>
           <input type="text" class="form-input" id="add-ln" placeholder="Family surname" />
         </div>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Nickname</label>
           <input type="text" class="form-input" id="add-nick" placeholder="Optional" />
         </div>
+      </div>
+
+      <!-- Row 3: Gender & Relationship Type (2 columns) -->
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Gender</label>
           <select class="form-select" id="add-gender">
@@ -568,9 +693,6 @@
             <option value="O">Other / Unknown (◆ ◇)</option>
           </select>
         </div>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Relationship / Lineage Type</label>
           <select class="form-select" id="add-relation-type">
@@ -580,16 +702,18 @@
             <option value="foster">Foster / Ward (dotted link)</option>
           </select>
         </div>
-        <div class="form-group" id="group-union-type" style="display:none;">
-          <label class="form-label">Union / Partner Status</label>
-          <select class="form-select" id="add-union-type">
-            <option value="married">Married / Union (═💍═)</option>
-            <option value="divorced">Divorced / Separated (═≠═)</option>
-            <option value="partners">Unmarried Partners (🤝)</option>
-          </select>
-        </div>
       </div>
 
+      <div class="form-group" id="group-union-type" style="display:none;">
+        <label class="form-label">Union / Partner Status</label>
+        <select class="form-select" id="add-union-type">
+          <option value="married">Married / Union (═💍═)</option>
+          <option value="divorced">Divorced / Separated (═≠═)</option>
+          <option value="partners">Unmarried Partners (🤝)</option>
+        </select>
+      </div>
+
+      <!-- Row 4: Birth Date and Passing Date (2 columns) -->
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Birth Date/Year</label>
@@ -601,8 +725,9 @@
         </div>
       </div>
 
+      <!-- Row 5: Bio Notes (Expandable Vertically Only) -->
       <div class="form-group">
-        <label class="form-label">Biographical Notes</label>
+        <label class="form-label">Biographical Notes (Expandable Vertically)</label>
         <textarea class="form-textarea" id="add-notes" rows="2" placeholder="Notes..."></textarea>
       </div>
 
@@ -621,6 +746,7 @@
   </div>
 </div>
 
+<!-- UNIVERSAL SYMBOLS MODAL -->
 <div class="modal-overlay" id="symbols-modal">
   <div class="modal-card" style="max-width:560px;">
     <div class="modal-header">
@@ -632,16 +758,16 @@
       <div class="symbol-card">
         <div class="symbol-icon" style="background:#2563EB; color:white;">■ ♂</div>
         <div>
-          <div style="font-weight:700; font-size:13px; color:#60A5FA;">Male (Square)</div>
-          <div style="font-size:11px; color:#94A3B8;">Cerulean blue header with square symbol</div>
+          <div style="font-weight:700; font-size:13px; color:#60A5FA;">Male (Square / Paternal)</div>
+          <div style="font-size:11px; color:#94A3B8;">Paternal lineage placed to the right</div>
         </div>
       </div>
 
       <div class="symbol-card">
         <div class="symbol-icon" style="background:#DB2777; color:white;">● ♀</div>
         <div>
-          <div style="font-weight:700; font-size:13px; color:#F472B6;">Female (Circle)</div>
-          <div style="font-size:11px; color:#94A3B8;">Rose-pink header with circle symbol</div>
+          <div style="font-weight:700; font-size:13px; color:#F472B6;">Female (Circle / Maternal)</div>
+          <div style="font-size:11px; color:#94A3B8;">Maternal lineage placed to the left</div>
         </div>
       </div>
 
@@ -680,8 +806,8 @@
       <div class="symbol-card">
         <div class="symbol-icon" style="background:#1E293B; color:#38BDF8;">│↓</div>
         <div>
-          <div style="font-weight:700; font-size:13px; color:#38BDF8;">Biological Descent</div>
-          <div style="font-size:11px; color:#94A3B8;">Solid vertical fork linking parents to children</div>
+          <div style="font-weight:700; font-size:13px; color:#38BDF8;">Biological Stem</div>
+          <div style="font-size:11px; color:#94A3B8;">Solid vertical trunk & junction nodes to children</div>
         </div>
       </div>
 
@@ -705,20 +831,25 @@
 </div>
 
 <div class="bottom-hint">
-  💡 Scroll to zoom • Drag to pan • Hover for quick bio • Click card to open edit & relationship panel
+  💡 Scroll to zoom • Drag to pan • Click card to open edit drawer • Use side icons for Undo, Redo, Save
 </div>
 
-﻿<script>
+<script>
   // Initial Tree Data from Python / Server
   const initialTreeData = __TREE_JSON_PLACEHOLDER__;
 
-  // Ephemeral In-Browser Session Persistence
+  // Session & Local Storage Keys
   const STORAGE_KEY = "kinship_family_tree_session";
+  const PERM_STORAGE_KEY = "kinship_family_tree_permanent";
+
   let treeState = null;
   try {
-    const saved = sessionStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      treeState = JSON.parse(saved);
+    const permSaved = localStorage.getItem(PERM_STORAGE_KEY);
+    const sessionSaved = sessionStorage.getItem(STORAGE_KEY);
+    if (permSaved) {
+      treeState = JSON.parse(permSaved);
+    } else if (sessionSaved) {
+      treeState = JSON.parse(sessionSaved);
     }
   } catch(e) {}
 
@@ -731,6 +862,106 @@
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(treeState));
     } catch(e) {}
   }
+
+  // Toast Notification Helper
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById("toast-notify");
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      t.classList.remove("show");
+    }, 2400);
+  }
+
+  // UNDO / REDO HISTORY STACK
+  const undoStack = [];
+  const redoStack = [];
+  const MAX_HISTORY = 40;
+
+  function pushStateToHistory() {
+    try {
+      undoStack.push(JSON.stringify(treeState));
+      if (undoStack.length > MAX_HISTORY) {
+        undoStack.shift();
+      }
+      redoStack.length = 0; // Clear redo stack on new action
+      updateUndoRedoUI();
+    } catch(e) {}
+  }
+
+  function undo() {
+    if (undoStack.length === 0) return;
+    redoStack.push(JSON.stringify(treeState));
+    const prev = JSON.parse(undoStack.pop());
+    treeState = prev;
+    if (selectedMemberId && !treeState.members[selectedMemberId]) {
+      selectedMemberId = Object.keys(treeState.members)[0] || null;
+    }
+    renderTree();
+    if (selectedMemberId && treeState.members[selectedMemberId]) {
+      selectMember(selectedMemberId);
+    } else {
+      document.getElementById("drawer").classList.remove("open");
+    }
+    updateUndoRedoUI();
+    showToast("↩️ Action Undone");
+  }
+
+  function redo() {
+    if (redoStack.length === 0) return;
+    undoStack.push(JSON.stringify(treeState));
+    const next = JSON.parse(redoStack.pop());
+    treeState = next;
+    if (selectedMemberId && !treeState.members[selectedMemberId]) {
+      selectedMemberId = Object.keys(treeState.members)[0] || null;
+    }
+    renderTree();
+    if (selectedMemberId && treeState.members[selectedMemberId]) {
+      selectMember(selectedMemberId);
+    } else {
+      document.getElementById("drawer").classList.remove("open");
+    }
+    updateUndoRedoUI();
+    showToast("↪️ Action Redone");
+  }
+
+  function updateUndoRedoUI() {
+    const uBtn = document.getElementById("side-btn-undo");
+    const rBtn = document.getElementById("side-btn-redo");
+    if (uBtn) uBtn.disabled = (undoStack.length === 0);
+    if (rBtn) rBtn.disabled = (redoStack.length === 0);
+  }
+
+  function saveProgress() {
+    saveSession();
+    try {
+      localStorage.setItem(PERM_STORAGE_KEY, JSON.stringify(treeState));
+    } catch(e) {}
+    showToast("💾 Progress saved to browser storage!");
+  }
+
+  document.getElementById("side-btn-undo").addEventListener("click", undo);
+  document.getElementById("side-btn-redo").addEventListener("click", redo);
+  document.getElementById("side-btn-save").addEventListener("click", saveProgress);
+
+  // Keyboard Shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+S)
+  window.addEventListener("keydown", (e) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      if (e.shiftKey) redo();
+      else undo();
+      e.preventDefault();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      redo();
+      e.preventDefault();
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      saveProgress();
+      e.preventDefault();
+    }
+  });
 
   let selectedMemberId = treeState.root_id || (Object.keys(treeState.members)[0] || null);
   let pendingAddType = null;
@@ -810,7 +1041,7 @@
     return hidden;
   }
 
-  // GLOBAL GENERATIONAL RANK COMPUTATION (UNLIMITED TIERS: GEN 1, 2, 3, 4, 5...)
+  // ACCURATE GENERATION COMPUTATION WITH BIDIRECTIONAL PROPAGATION & PARENT CONSTRAINTS
   function computeAccurateGenerations(hiddenSet) {
     const genRanks = {};
     const members = treeState.members || {};
@@ -818,29 +1049,44 @@
 
     if (visibleMembers.length === 0) return genRanks;
 
-    // Default all visible to 1
+    // Start with 1 for all visible members
     visibleMembers.forEach(m => { genRanks[m.id] = 1; });
 
-    // Iterative constraint propagation:
-    // rank(Child) >= max(rank(Parent)) + 1
-    // rank(Spouse1) == rank(Spouse2)
+    // Iterative constraint propagation in both directions:
+    // 1. Downward: rank(Child) >= max(rank(Parent)) + 1
+    // 2. Upward: rank(Parent) >= max(rank(Child)) - 1
+    // 3. Spouse Equalization: rank(Spouse1) == rank(Spouse2)
+    // 4. Co-parent Equalization: parents of the same child share the exact same generation tier
     let changed = true;
     let iters = 0;
-    while (changed && iters < 30) {
+    while (changed && iters < 40) {
       changed = false;
       iters++;
 
       for (const m of visibleMembers) {
+        const curR = genRanks[m.id] || 1;
+
+        // Downward constraint: rank(Child) >= max(rank(Parent)) + 1
         const pList = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
         if (pList.length > 0) {
-          const maxParentRank = Math.max(...pList.map(pid => genRanks[pid] || 1));
-          const expectedChildRank = maxParentRank + 1;
-          if ((genRanks[m.id] || 1) < expectedChildRank) {
-            genRanks[m.id] = expectedChildRank;
+          const maxP = Math.max(...pList.map(pid => genRanks[pid] || 1));
+          if (curR < maxP + 1) {
+            genRanks[m.id] = maxP + 1;
             changed = true;
           }
         }
 
+        // Upward constraint: rank(Parent) >= max(rank(Child)) - 1
+        const cList = (m.children || []).filter(cid => !hiddenSet.has(cid) && members[cid]);
+        if (cList.length > 0) {
+          const maxC = Math.max(...cList.map(cid => genRanks[cid] || 1));
+          if (curR < maxC - 1) {
+            genRanks[m.id] = maxC - 1;
+            changed = true;
+          }
+        }
+
+        // Spouse equalization
         (m.spouses || []).forEach(spId => {
           if (!hiddenSet.has(spId) && members[spId]) {
             const r1 = genRanks[m.id] || 1;
@@ -850,13 +1096,33 @@
             if (r2 !== target) { genRanks[spId] = target; changed = true; }
           }
         });
+
+        // Co-parents equalization (parents sharing children)
+        if (pList.length > 1) {
+          const maxCoParent = Math.max(...pList.map(pid => genRanks[pid] || 1));
+          pList.forEach(pid => {
+            if (genRanks[pid] !== maxCoParent) {
+              genRanks[pid] = maxCoParent;
+              changed = true;
+            }
+          });
+        }
       }
+    }
+
+    // Normalize so minimum rank is strictly 1
+    const minR = Math.min(...Object.values(genRanks));
+    if (minR < 1 || minR > 1) {
+      const shift = 1 - minR;
+      Object.keys(genRanks).forEach(id => {
+        genRanks[id] += shift;
+      });
     }
 
     return genRanks;
   }
 
-  // RENDER FUNCTION WITH CENTERED COUPLES, CLEAN OFFSPRING BRANCHES & TRUE COLLAPSING
+  // STEMMING TREE RENDER ENGINE: MATERNAL ON LEFT, PATERNAL ON RIGHT, PRECISE BOUNDS
   function renderTree() {
     saveSession();
     updateStats();
@@ -872,28 +1138,6 @@
     const visibleMembers = Object.values(members).filter(m => !hiddenSet.has(m.id));
     if (visibleMembers.length === 0) return;
 
-    // RENDER GENERATIONAL RANK GUIDES (UNLIMITED)
-    const maxGen = Math.max(...Object.values(genRanks), 1);
-    for (let g = 1; g <= maxGen; g++) {
-      const rowY = (g - 1) * (CARD_HEIGHT + Y_GAP) + 80;
-      tiersGroup.append("line")
-        .attr("x1", -2000)
-        .attr("y1", rowY - 18)
-        .attr("x2", 5000)
-        .attr("y2", rowY - 18)
-        .attr("stroke", "rgba(51, 65, 85, 0.4)")
-        .attr("stroke-dasharray", "4,6")
-        .attr("stroke-width", "1");
-
-      tiersGroup.append("text")
-        .attr("x", 20)
-        .attr("y", rowY - 24)
-        .attr("fill", "rgba(148, 163, 184, 0.45)")
-        .attr("font-size", "11px")
-        .attr("font-weight", "700")
-        .text(`GENERATION ${g}`);
-    }
-
     const nodePositions = {};
     const placed = new Set();
     const processedCouples = new Set();
@@ -905,7 +1149,8 @@
       const m = members[mid];
 
       const visibleSpouses = (m.spouses || []).filter(sp => !hiddenSet.has(sp) && members[sp] && !visited.has(sp));
-      const coupleW = CARD_WIDTH * (1 + visibleSpouses.length) + SPOUSE_GAP * visibleSpouses.length;
+      const coupleCount = 1 + visibleSpouses.length;
+      const coupleW = coupleCount * CARD_WIDTH + (coupleCount - 1) * SPOUSE_GAP;
 
       if (m.is_collapsed) {
         return coupleW;
@@ -931,7 +1176,11 @@
       return Math.max(coupleW, childrenTotalW);
     }
 
-    // Recursive layout of a family unit
+    // Recursive layout of a family unit:
+    // RULES:
+    // 1. Maternal (Female / Mother) strictly on the LEFT!
+    // 2. Paternal (Male / Father) strictly on the RIGHT!
+    // 3. Children arranged chronologically under centered couple.
     function placeFamilyUnit(mid, startX, visited = new Set()) {
       if (!mid || visited.has(mid) || hiddenSet.has(mid) || !members[mid]) return startX;
       visited.add(mid);
@@ -940,46 +1189,69 @@
       const gen = genRanks[mid] || 1;
       const y = (gen - 1) * (CARD_HEIGHT + Y_GAP) + 80;
 
-      const visibleSpouses = (m.spouses || []).filter(sp => !hiddenSet.has(sp) && members[sp] && !visited.has(sp));
-      visibleSpouses.forEach(sp => visited.add(sp));
+      // Gather couple members
+      const coupleIds = [mid];
+      (m.spouses || []).forEach(spId => {
+        if (!hiddenSet.has(spId) && members[spId] && !visited.has(spId) && !coupleIds.includes(spId)) {
+          coupleIds.push(spId);
+          visited.add(spId);
+        }
+      });
 
-      const coupleW = CARD_WIDTH * (1 + visibleSpouses.length) + SPOUSE_GAP * visibleSpouses.length;
+      // SORT COUPLE: FEMALE (MATERNAL) ON LEFT, MALE (PATERNAL) ON RIGHT
+      coupleIds.sort((idA, idB) => {
+        const a = members[idA];
+        const b = members[idB];
+        if (!a || !b) return 0;
+        if (a.gender === 'F' && b.gender !== 'F') return -1;
+        if (b.gender === 'F' && a.gender !== 'F') return 1;
+        if (a.gender !== 'M' && b.gender === 'M') return -1;
+        if (b.gender !== 'M' && a.gender === 'M') return 1;
+        return 0;
+      });
 
-      // Children list
-      const allChildren = new Set(m.children || []);
-      visibleSpouses.forEach(sp => {
-        (members[sp].children || []).forEach(cid => allChildren.add(cid));
+      const coupleCount = coupleIds.length;
+      const coupleW = coupleCount * CARD_WIDTH + (coupleCount - 1) * SPOUSE_GAP;
+
+      // Collect all shared children
+      const allChildren = new Set();
+      coupleIds.forEach(id => {
+        (members[id].children || []).forEach(cid => allChildren.add(cid));
       });
       const validChildren = Array.from(allChildren).filter(cid => !hiddenSet.has(cid) && members[cid]);
 
-      let subtreeW = coupleW;
+      // Sort children chronologically (oldest on left, youngest on right)
+      validChildren.sort((aId, bId) => {
+        const ca = members[aId];
+        const cb = members[bId];
+        const ya = parseInt(ca.birth_date) || 0;
+        const yb = parseInt(cb.birth_date) || 0;
+        if (ya && yb) return ya - yb;
+        return 0;
+      });
+
+      let childrenTotalW = 0;
       if (!m.is_collapsed && validChildren.length > 0) {
-        let cw = 0;
         validChildren.forEach((cid, i) => {
-          cw += calculateSubtreeWidth(cid, new Set());
-          if (i < validChildren.length - 1) cw += X_GAP;
+          childrenTotalW += calculateSubtreeWidth(cid, new Set());
+          if (i < validChildren.length - 1) childrenTotalW += X_GAP;
         });
-        subtreeW = Math.max(coupleW, cw);
       }
 
-      // Center the couple within the subtree width
-      let coupleStartX = startX + (subtreeW - coupleW) / 2;
+      const subtreeW = Math.max(coupleW, childrenTotalW);
 
-      // Place Primary Member
-      nodePositions[mid] = { x: coupleStartX, y: y };
-      placed.add(mid);
-
-      // Place Spouses side-by-side
-      let spX = coupleStartX + CARD_WIDTH + SPOUSE_GAP;
-      visibleSpouses.forEach(spId => {
-        nodePositions[spId] = { x: spX, y: y };
-        placed.add(spId);
-        spX += CARD_WIDTH + SPOUSE_GAP;
+      // Center the couple within subtree width
+      const coupleStartX = startX + (subtreeW - coupleW) / 2;
+      let curCoupleX = coupleStartX;
+      coupleIds.forEach(id => {
+        nodePositions[id] = { x: curCoupleX, y: y };
+        placed.add(id);
+        curCoupleX += CARD_WIDTH + SPOUSE_GAP;
       });
 
       // Place Children centered under couple
       if (!m.is_collapsed && validChildren.length > 0) {
-        let childCurX = startX;
+        let childCurX = startX + (subtreeW - childrenTotalW) / 2;
         validChildren.forEach(cid => {
           if (!placed.has(cid)) {
             const cWidth = calculateSubtreeWidth(cid, new Set());
@@ -992,11 +1264,17 @@
       return startX + subtreeW + X_GAP;
     }
 
-    // Place Roots
+    // Place Roots: Maternal ancestors on LEFT, Paternal ancestors on RIGHT
     let curX = 60;
     const roots = visibleMembers.filter(m => !m.parents || m.parents.length === 0);
-    const startRoots = roots.length > 0 ? roots : visibleMembers;
+    roots.sort((a, b) => {
+      // Female / Maternal first (left), Male / Paternal second (right)
+      if (a.gender === 'F' && b.gender !== 'F') return -1;
+      if (b.gender === 'F' && a.gender !== 'F') return 1;
+      return 0;
+    });
 
+    const startRoots = roots.length > 0 ? roots : visibleMembers;
     startRoots.forEach(r => {
       if (!placed.has(r.id)) {
         curX = placeFamilyUnit(r.id, curX) + X_GAP;
@@ -1010,7 +1288,33 @@
       }
     });
 
-    // DRAW MARRIAGE / UNION CONNECTIONS
+    // RENDER GENERATIONAL GUIDES CONFINED TO ACTUAL TREE WIDTH (AVOID LONG EXPORT ROWS)
+    const allX = Object.values(nodePositions).map(p => p.x);
+    const minTreeX = allX.length > 0 ? Math.min(...allX) - 60 : 20;
+    const maxTreeX = allX.length > 0 ? Math.max(...allX) + CARD_WIDTH + 60 : 800;
+    const maxGen = Math.max(...Object.values(genRanks), 1);
+
+    for (let g = 1; g <= maxGen; g++) {
+      const rowY = (g - 1) * (CARD_HEIGHT + Y_GAP) + 80;
+      tiersGroup.append("line")
+        .attr("x1", minTreeX)
+        .attr("y1", rowY - 18)
+        .attr("x2", maxTreeX)
+        .attr("y2", rowY - 18)
+        .attr("stroke", "rgba(51, 65, 85, 0.45)")
+        .attr("stroke-dasharray", "4,6")
+        .attr("stroke-width", "1");
+
+      tiersGroup.append("text")
+        .attr("x", minTreeX + 14)
+        .attr("y", rowY - 24)
+        .attr("fill", "rgba(148, 163, 184, 0.5)")
+        .attr("font-size", "11px")
+        .attr("font-weight", "700")
+        .text(`GENERATION ${g}`);
+    }
+
+    // DRAW MARRIAGE / UNION CONNECTIONS (═💍═)
     visibleMembers.forEach(m => {
       (m.spouses || []).forEach(spId => {
         if (!hiddenSet.has(spId) && members[spId] && nodePositions[m.id] && nodePositions[spId]) {
@@ -1057,7 +1361,7 @@
       });
     });
 
-    // DRAW UNIFIED DESCENT FORKS TO CHILDREN
+    // DRAW STEMMING TREE DESCENT FORKS TO CHILDREN WITH JUNCTION NODES
     const parentGroups = {};
     visibleMembers.forEach(m => {
       const vParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
@@ -1091,15 +1395,24 @@
       const firstChildY = nodePositions[validChildren[0]].y;
       const forkY = anchorY + (firstChildY - anchorY) / 2;
 
-      // Stem from parents down to fork level
+      // Vertical stem dropping from parental union
       linksGroup.append("path")
         .attr("d", `M ${anchorX} ${anchorY} V ${forkY}`)
-        .attr("stroke", "#64748B")
+        .attr("stroke", "#38BDF8")
         .attr("stroke-width", "2.5")
         .attr("stroke-linecap", "round")
         .attr("fill", "none");
 
-      // Horizontal descent bar spanning children
+      // Glowing stem fork junction node
+      linksGroup.append("circle")
+        .attr("cx", anchorX)
+        .attr("cy", forkY)
+        .attr("r", 4)
+        .attr("fill", "#38BDF8")
+        .attr("stroke", "#0B0F19")
+        .attr("stroke-width", "1.5");
+
+      // Horizontal descent conduit spanning children
       const childCenterXs = validChildren.map(cid => nodePositions[cid].x + CARD_WIDTH / 2);
       const minCX = Math.min(anchorX, ...childCenterXs);
       const maxCX = Math.max(anchorX, ...childCenterXs);
@@ -1111,7 +1424,7 @@
         .attr("stroke-linecap", "round")
         .attr("fill", "none");
 
-      // Vertical drop into each child
+      // Vertical drops into each child with junction dots
       validChildren.forEach(cid => {
         const cPos = nodePositions[cid];
         const childObj = members[cid];
@@ -1141,6 +1454,13 @@
         if (strokeDash !== "none") {
           dropPath.attr("stroke-dasharray", strokeDash);
         }
+
+        // Branch junction dot leading into child
+        linksGroup.append("circle")
+          .attr("cx", cX)
+          .attr("cy", forkY)
+          .attr("r", 3)
+          .attr("fill", strokeColor);
       });
     });
 
@@ -1163,7 +1483,7 @@
           const lifespan = m.is_living ? `b. ${b} (Living)` : `${b} — †${m.death_date || '?'}`;
           const mName = m.middle_name ? `${m.middle_name} ` : '';
           const relTag = m.relation_type && m.relation_type !== 'biological' ? ` [${m.relation_type.toUpperCase()}]` : '';
-          document.getElementById("tt-name").textContent = `${m.first_name} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${mName}${m.last_name}${relTag}`;
+          document.getElementById("tt-name").textContent = `${m.first_name} ${m.nickname ? '"' + m.nickname + '" ' : ''}${mName}${m.last_name}${relTag}`;
           document.getElementById("tt-dates").textContent = lifespan;
           document.getElementById("tt-bio").textContent = m.notes || "No additional bio details.";
           tooltip.style.display = "block";
@@ -1225,7 +1545,7 @@
       }
 
       let midStr = m.middle_name ? `${m.middle_name.charAt(0)}. ` : "";
-      let baseName = `${m.first_name || ''} ${m.nickname ? '\"' + m.nickname + '\" ' : ''}${midStr}${m.last_name || ''}`.trim() || "Unnamed";
+      let baseName = `${m.first_name || ''} ${m.nickname ? '"' + m.nickname + '" ' : ''}${midStr}${m.last_name || ''}`.trim() || "Unnamed";
       if (m.relation_type === 'adopted') baseName = `[${baseName}]`;
 
       card.append("text")
@@ -1280,6 +1600,7 @@
           .style("cursor", "pointer")
           .on("click", (e) => {
             e.stopPropagation();
+            pushStateToHistory();
             m.is_collapsed = false;
             renderTree();
           });
@@ -1300,7 +1621,7 @@
     });
   }
 
-﻿  function updateStats() {
+  function updateStats() {
     const members = Object.values(treeState.members || {});
     document.getElementById("stat-members").textContent = members.length;
     
@@ -1352,10 +1673,10 @@
   }
 
   function populateRelList(containerId, memberIds) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = "";
+    const cEl = document.getElementById(containerId);
+    cEl.innerHTML = "";
     if (!memberIds || memberIds.length === 0) {
-      container.innerHTML = '<span class="rel-empty">None recorded</span>';
+      cEl.innerHTML = '<span class="rel-empty">None recorded</span>';
       return;
     }
     memberIds.forEach(id => {
@@ -1368,13 +1689,14 @@
         chip.addEventListener("click", () => {
           selectMember(id);
         });
-        container.appendChild(chip);
+        cEl.appendChild(chip);
       }
     });
   }
 
   document.getElementById("btn-save-edit").addEventListener("click", () => {
     if (!selectedMemberId || !treeState.members[selectedMemberId]) return;
+    pushStateToHistory();
     const m = treeState.members[selectedMemberId];
     m.first_name = document.getElementById("edit-fn").value.trim();
     m.middle_name = document.getElementById("edit-mn").value.trim();
@@ -1389,6 +1711,7 @@
 
     renderTree();
     selectMember(selectedMemberId);
+    showToast("✓ Details saved");
   });
 
   // PHILIPPINE AUTO-ALLOCATE PARENTS
@@ -1397,6 +1720,7 @@
     const m = treeState.members[selectedMemberId];
     if (!m.middle_name || !m.last_name) return;
 
+    pushStateToHistory();
     const fatherId = "mem_f_" + Math.random().toString(16).slice(2, 8);
     const motherId = "mem_m_" + Math.random().toString(16).slice(2, 8);
 
@@ -1441,15 +1765,17 @@
     treeState.members[fatherId] = father;
     treeState.members[motherId] = mother;
     if (!m.parents) m.parents = [];
-    if (!m.parents.includes(fatherId)) m.parents.push(fatherId);
-    if (!m.parents.includes(motherId)) m.parents.push(motherId);
+    if (!m.parents.includes(motherId)) m.parents.push(motherId); // Mother left
+    if (!m.parents.includes(fatherId)) m.parents.push(fatherId); // Father right
 
     renderTree();
     selectMember(selectedMemberId);
+    showToast("🇵🇭 Parents auto-allocated");
   });
 
   document.getElementById("btn-toggle-collapse").addEventListener("click", () => {
     if (!selectedMemberId || !treeState.members[selectedMemberId]) return;
+    pushStateToHistory();
     const m = treeState.members[selectedMemberId];
     m.is_collapsed = !m.is_collapsed;
     renderTree();
@@ -1460,6 +1786,7 @@
     if (!selectedMemberId) return;
     if (!confirm("Are you sure you want to remove this relative from the family tree?")) return;
 
+    pushStateToHistory();
     const mid = selectedMemberId;
     Object.values(treeState.members).forEach(m => {
       if (m.parents) m.parents = m.parents.filter(id => id !== mid);
@@ -1472,6 +1799,7 @@
     document.getElementById("drawer").classList.remove("open");
     selectedMemberId = Object.keys(treeState.members)[0] || null;
     renderTree();
+    showToast("🗑️ Relative removed");
   });
 
   document.getElementById("btn-close-drawer").addEventListener("click", () => {
@@ -1485,6 +1813,7 @@
     const titleEl = document.getElementById("add-modal-title");
     const lnInput = document.getElementById("add-ln");
     const mnInput = document.getElementById("add-mn");
+    const genderSel = document.getElementById("add-gender");
     const unionGroup = document.getElementById("group-union-type");
     const phPrompt = document.getElementById("add-ph-prompt");
 
@@ -1496,18 +1825,30 @@
       titleEl.textContent = "🌱 Plant Ancestral Root";
       lnInput.value = "";
       mnInput.value = "";
+      genderSel.value = "M";
     } else if (type === 'child') {
       titleEl.textContent = `👶 Add Child to ${sel ? sel.first_name : ''}`;
       lnInput.value = sel ? sel.last_name : "";
       mnInput.value = (sel && sel.gender === 'F') ? sel.last_name : (sel && sel.middle_name ? sel.middle_name : "");
+      genderSel.value = "M";
     } else if (type === 'parent') {
       titleEl.textContent = `👴 Add Parent of ${sel ? sel.first_name : ''}`;
       lnInput.value = sel ? sel.last_name : "";
       mnInput.value = "";
+      // If child already has a male parent, suggest female; if has female, suggest male
+      const hasMaleParent = sel && (sel.parents || []).some(pid => treeState.members[pid] && treeState.members[pid].gender === 'M');
+      const hasFemaleParent = sel && (sel.parents || []).some(pid => treeState.members[pid] && treeState.members[pid].gender === 'F');
+      if (hasMaleParent && !hasFemaleParent) genderSel.value = "F";
+      else if (hasFemaleParent && !hasMaleParent) genderSel.value = "M";
+      else genderSel.value = "M";
     } else if (type === 'spouse') {
       titleEl.textContent = `💍 Add Spouse / Partner of ${sel ? sel.first_name : ''}`;
       lnInput.value = "";
       mnInput.value = "";
+      // Suggest opposite gender of partner
+      if (sel && sel.gender === 'M') genderSel.value = "F";
+      else if (sel && sel.gender === 'F') genderSel.value = "M";
+      else genderSel.value = "O";
     }
 
     document.getElementById("add-fn").value = "";
@@ -1538,6 +1879,7 @@
       return;
     }
 
+    pushStateToHistory();
     const mn = document.getElementById("add-mn").value.trim();
     const ln = document.getElementById("add-ln").value.trim();
     const newId = "mem_" + Math.random().toString(16).slice(2, 10);
@@ -1584,6 +1926,7 @@
       if (!sel.parents.includes(newId)) sel.parents.push(newId);
       newMember.children.push(sel.id);
 
+      // Connect new parent with existing parents as spouses and share siblings
       existingParents.forEach(epId => {
         const ep = treeState.members[epId];
         if (ep) {
@@ -1591,8 +1934,18 @@
           if (!newMember.spouses.includes(epId)) newMember.spouses.push(epId);
           ep.spouse_unions[newId] = "married";
           newMember.spouse_unions[epId] = "married";
+          // Also share other children of existing parent
+          (ep.children || []).forEach(cid => {
+            if (!newMember.children.includes(cid)) newMember.children.push(cid);
+            const coChild = treeState.members[cid];
+            if (coChild && !coChild.parents.includes(newId)) coChild.parents.push(newId);
+          });
         }
       });
+      // If sel was root, update tree root to the new parent
+      if (treeState.root_id === sel.id) {
+        treeState.root_id = newId;
+      }
     } else if (pendingAddType === 'spouse' && sel) {
       if (!sel.spouses.includes(newId)) sel.spouses.push(newId);
       newMember.spouses.push(sel.id);
@@ -1604,6 +1957,7 @@
 
     treeState.members[newId] = newMember;
 
+    // Philippine naming auto-generate parents
     if ((pendingAddType === 'root' || (pendingAddType === 'child' && newMember.parents.length < 2)) && autoGenParents && mn && ln) {
       const fatherId = "mem_f_" + Math.random().toString(16).slice(2, 8);
       const motherId = "mem_m_" + Math.random().toString(16).slice(2, 8);
@@ -1648,13 +2002,14 @@
 
       treeState.members[fatherId] = father;
       treeState.members[motherId] = mother;
-      newMember.parents = [fatherId, motherId];
+      newMember.parents = [motherId, fatherId];
       if (pendingAddType === 'root') treeState.root_id = fatherId;
     }
 
     closeAddModal();
     renderTree();
     selectMember(newId);
+    showToast("🌱 Relative added");
   });
 
   document.getElementById("btn-symbols").addEventListener("click", () => {
@@ -1668,11 +2023,14 @@
   });
 
   function fitView() {
-    const bbox = mainGroup.node().getBBox();
+    const nodesNode = nodesGroup.node();
+    if (!nodesNode || nodesGroup.selectAll("*").empty()) return;
+    const bbox = nodesNode.getBBox();
     if (!bbox || bbox.width === 0 || bbox.height === 0) return;
+
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const pad = 65;
+    const pad = 70;
     const scale = Math.min((w - pad * 2) / bbox.width, (h - pad * 2) / bbox.height, 1.25);
     const tx = (w - bbox.width * scale) / 2 - bbox.x * scale;
     const ty = (h - bbox.height * scale) / 2 - bbox.y * scale;
@@ -1682,41 +2040,55 @@
       d3.zoomIdentity.translate(tx, ty).scale(scale)
     );
   }
-  document.getElementById("btn-fit").addEventListener("click", fitView);
+  document.getElementById("side-btn-fit").addEventListener("click", fitView);
   window.addEventListener("resize", () => {
     setTimeout(fitView, 150);
   });
 
   document.getElementById("btn-reset-sample").addEventListener("click", () => {
-    if (confirm("Reset the canvas to the default 3-generation sample tree?")) {
+    if (confirm("Reset the canvas to the default sample tree?")) {
+      pushStateToHistory();
       treeState = JSON.parse(JSON.stringify(initialTreeData));
       selectedMemberId = treeState.root_id;
       renderTree();
       setTimeout(fitView, 120);
+      showToast("🔄 Reset to sample tree");
     }
   });
 
   document.getElementById("btn-clear-all").addEventListener("click", () => {
     if (confirm("Wipe all data from your browser session? This cannot be undone.")) {
+      pushStateToHistory();
       sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PERM_STORAGE_KEY);
       treeState = { root_id: null, members: {} };
       selectedMemberId = null;
       document.getElementById("drawer").classList.remove("open");
       renderTree();
+      showToast("🧹 Canvas cleared");
     }
   });
 
-  // FULL BOUNDS EXPORT (ZERO CROPPING GUARANTEED)
+  // TIGHT CROPPED EXPORT (NO LONG ROWS, PERFECT FIT FOR ANY SIZE TREE)
   function prepareCleanSvgForExport() {
     const svgEl = document.getElementById("family-svg");
-    const bbox = mainGroup.node().getBBox();
-    if (!bbox || bbox.width === 0 || bbox.height === 0) return null;
+    const nodesNode = nodesGroup.node();
+    const linksNode = linksGroup.node();
 
-    const pad = 80;
-    const minX = bbox.x - pad;
-    const minY = bbox.y - pad;
-    const totalW = bbox.width + pad * 2;
-    const totalH = bbox.height + pad * 2;
+    if (!nodesNode || nodesGroup.selectAll("*").empty()) return null;
+
+    const nBBox = nodesNode.getBBox();
+    const lBBox = linksGroup.selectAll("*").empty() ? nBBox : linksNode.getBBox();
+
+    // Tight padding around actual cards and branches
+    const pad = 42;
+    const minX = Math.min(nBBox.x, lBBox.x) - pad;
+    const minY = Math.min(nBBox.y, lBBox.y) - pad;
+    const maxX = Math.max(nBBox.x + nBBox.width, lBBox.x + lBBox.width) + pad;
+    const maxY = Math.max(nBBox.y + nBBox.height, lBBox.y + lBBox.height) + pad;
+
+    const totalW = Math.max(160, Math.ceil(maxX - minX));
+    const totalH = Math.max(120, Math.ceil(maxY - minY));
 
     const clone = svgEl.cloneNode(true);
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
@@ -1730,6 +2102,7 @@
       clonedMainGroup.removeAttribute("transform");
     }
 
+    // Insert dark background sized exactly to cropped canvas
     const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     bg.setAttribute("x", minX);
     bg.setAttribute("y", minY);
@@ -1744,7 +2117,7 @@
     return { svgString, width: totalW, height: totalH };
   }
 
-  // PNG EXPORT
+  // PNG EXPORT (CROPPED TO EXACT TREE BOUNDS)
   document.getElementById("btn-png").addEventListener("click", () => {
     const exportData = prepareCleanSvgForExport();
     if (!exportData) {
@@ -1759,7 +2132,7 @@
 
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const scale = 2;
+      const scale = 2; // high-DPI
       canvas.width = width * scale;
       canvas.height = height * scale;
       const ctx = canvas.getContext("2d");
@@ -1771,11 +2144,12 @@
       a.href = canvas.toDataURL("image/png");
       a.download = "kinship_family_tree.png";
       a.click();
+      showToast("📸 PNG downloaded");
     };
     img.src = url;
   });
 
-  // PDF EXPORT
+  // PDF EXPORT (CROPPED TO EXACT TREE BOUNDS)
   document.getElementById("btn-pdf").addEventListener("click", () => {
     const exportData = prepareCleanSvgForExport();
     if (!exportData) {
@@ -1800,19 +2174,20 @@
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new window.jspdf.jsPDF({
-        orientation: width > height ? "landscape" : "portrait",
+        orientation: width >= height ? "landscape" : "portrait",
         unit: "pt",
         format: [width, height]
       });
 
       pdf.addImage(imgData, "PNG", 0, 0, width, height);
       pdf.save("kinship_family_tree.pdf");
+      showToast("📄 PDF downloaded");
     };
     img.src = url;
   });
 
   renderTree();
-  setTimeout(fitView, 120);
+  setTimeout(fitView, 140);
 
   svg.on("click", (e) => {
     if (e.target.tagName === 'svg' || e.target.id === 'canvas-container') {

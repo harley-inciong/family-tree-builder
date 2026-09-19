@@ -192,6 +192,15 @@ class FamilyTree:
                     ep.spouses.append(parent_member.id)
                 if ep_id not in parent_member.spouses:
                     parent_member.spouses.append(ep_id)
+                ep.spouse_unions[parent_member.id] = "married"
+                parent_member.spouse_unions[ep_id] = "married"
+                # Co-parents share any children
+                for cid in ep.children:
+                    if cid not in parent_member.children:
+                        parent_member.children.append(cid)
+                    co_child = self.get_member(cid)
+                    if co_child and parent_member.id not in co_child.parents:
+                        co_child.parents.append(parent_member.id)
             
         return parent_member.id
 

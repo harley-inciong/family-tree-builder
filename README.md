@@ -9,6 +9,19 @@ A modern, interactive web application built with **Streamlit** and **D3.js** for
 
 ## ✨ Features
 
+- **Stemming Tree Layout & Lineage Arrangement**:
+  - **Maternal on Left, Paternal on Right**: Strictly arranges maternal ancestors/mothers to the left and paternal ancestors/fathers to the right.
+  - **Biological Stemming Branches**: Central trunk drop from parental unions with glowing junction nodes and horizontal descent conduits leading to each child.
+  - **Bidirectional Generational Propagation**: Automatically calculates accurate generation tiers so parents are never misplaced into older or younger generations.
+- **Side Floating Toolbar (Undo, Redo, Save Progress)**:
+  - **↩️ Undo (Ctrl+Z)** and **↪️ Redo (Ctrl+Y)** with complete in-memory history stack.
+  - **💾 Save Progress (Ctrl+S)**: Persists snapshots directly to permanent browser local storage with instant toast alerts.
+  - **⛶ Fit Canvas**: Instant center-fit zoom.
+- **Crop-to-Fit Export Pipeline (PNG & PDF)**:
+  - Crops exactly to the dimensions of the family tree without generating long empty rows. Perfect for compact and large trees alike.
+- **Clean 2-Column Edit & Add Relative Interface**:
+  - Structured 2-column layout in exact hierarchy: First & Middle Name, Surname & Nickname, Gender & Relationship Type, Birth Date & Passing Date.
+  - **Vertically Expandable Bio Notes**: Locked horizontal width with smooth vertical expansion.
 - **Universal Genealogical Diagram Symbols & Extended Notation**:
   - **■ ♂ (Square / Male)** with cerulean header
   - **● ♀ (Circle / Female)** with rose header
@@ -20,19 +33,6 @@ A modern, interactive web application built with **Streamlit** and **D3.js** for
 - **🇵🇭 Philippine Naming System & Parent Auto-Allocation**:
   - Dedicated data entry for **Middle Name** (Maternal maiden surname) and **Surname** (Paternal surname).
   - Automatically detects when middle and last names are provided and offers 1-click **Auto-Allocation of Father and Mother branches** linked in marriage!
-- **Zero-Cropping Export Pipeline**:
-  - **📸 Download PNG**: Captures the entire tree canvas at 2x resolution with untruncated bounds and all connection lines preserved.
-  - **📄 Download PDF**: Vector landscape PDF generation tailored to the exact dimensions of your tree.
-- **100% Responsive UI/UX**:
-  - Full-viewport responsive layout (`96vh`) that automatically refits whenever the browser window is resized.
-  - **Hover Tooltips**: Instant preview of lifespan, nickname, bio notes, and family summary on hover.
-  - **Click to Edit**: Clicking any member opens an elegant slide-out **Edit & Relationship Drawer**.
-- **Family Relationship Hub**:
-  - Quick navigation chips to jump between parents, spouses, and children, with instant `+ Add` shortcuts.
-- **Retractable Lineage Pills**:
-  - Collapse complex descendant branches into sleek indicator badges (*"▶ Expand Lineage of [Surname]"*).
-- **Ephemeral Session Privacy**:
-  - In-browser session persistence (`sessionStorage`): automatically saves your work across page refreshes and cleans up when the browser tab is closed.
 
 ---
 
