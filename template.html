@@ -473,6 +473,14 @@
     border-radius: 6px;
     pointer-events: none;
   }
+
+  /* Interactive Lineage Highlighting Transitions */
+  .lineage-link {
+    transition: stroke 0.25s ease, stroke-width 0.25s ease, opacity 0.25s ease;
+  }
+  .node-card {
+    transition: transform 0.15s ease, filter 0.2s ease;
+  }
 </style>
 </head>
 <body>
@@ -831,7 +839,7 @@
 </div>
 
 <div class="bottom-hint">
-  💡 Scroll to zoom • Drag to pan • Click card to open edit drawer • Use side icons for Undo, Redo, Save
+  💡 Scroll to zoom • Drag to pan • Hover any relative to highlight their exact lineage • Click card to edit
 </div>
 
 <script>
@@ -887,7 +895,7 @@
       if (undoStack.length > MAX_HISTORY) {
         undoStack.shift();
       }
-      redoStack.length = 0; // Clear redo stack on new action
+      redoStack.length = 0;
       updateUndoRedoUI();
     } catch(e) {}
   }
@@ -964,12 +972,13 @@
   });
 
   let selectedMemberId = treeState.root_id || (Object.keys(treeState.members)[0] || null);
+  let hoveredMemberId = null;
   let pendingAddType = null;
 
   const CARD_WIDTH = 220;
   const CARD_HEIGHT = 92;
   const SPOUSE_GAP = 28;
-  const X_GAP = 36;
+  const X_GAP = 38;
   const Y_GAP = 96;
 
   const container = document.getElementById("canvas-container");
@@ -989,13 +998,25 @@
     .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 8)
     .attr("stroke", "#475569").attr("stroke-width", 1.5).attr("opacity", 0.4);
 
+  // Glow filter for highlighted lineages
+  const glowFilter = defs.append("filter")
+    .attr("id", "line-glow")
+    .attr("x", "-20%").attr("y", "-20%")
+    .attr("width", "140%").attr("height", "140%");
+  glowFilter.append("feGaussianBlur")
+    .attr("stdDeviation", "2.5")
+    .attr("result", "blur");
+  const feMerge = glowFilter.append("feMerge");
+  feMerge.append("feMergeNode").attr("in", "blur");
+  feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
   const mainGroup = svg.append("g").attr("id", "main-group");
   const tiersGroup = mainGroup.append("g").attr("id", "tiers-group");
   const linksGroup = mainGroup.append("g").attr("id", "links-group");
   const nodesGroup = mainGroup.append("g").attr("id", "nodes-group");
 
   const zoom = d3.zoom()
-    .scaleExtent([0.1, 4.0])
+    .scaleExtent([0.08, 4.0])
     .on("zoom", (e) => {
       mainGroup.attr("transform", e.transform);
     });
@@ -1041,7 +1062,7 @@
     return hidden;
   }
 
-  // ACCURATE GENERATION COMPUTATION WITH BIDIRECTIONAL PROPAGATION & PARENT CONSTRAINTS
+  // ACCURATE GENERATION COMPUTATION WITH BIDIRECTIONAL CONSTRAINT PROPAGATION
   function computeAccurateGenerations(hiddenSet) {
     const genRanks = {};
     const members = treeState.members || {};
@@ -1049,14 +1070,8 @@
 
     if (visibleMembers.length === 0) return genRanks;
 
-    // Start with 1 for all visible members
     visibleMembers.forEach(m => { genRanks[m.id] = 1; });
 
-    // Iterative constraint propagation in both directions:
-    // 1. Downward: rank(Child) >= max(rank(Parent)) + 1
-    // 2. Upward: rank(Parent) >= max(rank(Child)) - 1
-    // 3. Spouse Equalization: rank(Spouse1) == rank(Spouse2)
-    // 4. Co-parent Equalization: parents of the same child share the exact same generation tier
     let changed = true;
     let iters = 0;
     while (changed && iters < 40) {
@@ -1066,7 +1081,7 @@
       for (const m of visibleMembers) {
         const curR = genRanks[m.id] || 1;
 
-        // Downward constraint: rank(Child) >= max(rank(Parent)) + 1
+        // Downward: rank(Child) >= max(rank(Parent)) + 1
         const pList = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
         if (pList.length > 0) {
           const maxP = Math.max(...pList.map(pid => genRanks[pid] || 1));
@@ -1076,7 +1091,7 @@
           }
         }
 
-        // Upward constraint: rank(Parent) >= max(rank(Child)) - 1
+        // Upward: rank(Parent) >= max(rank(Child)) - 1
         const cList = (m.children || []).filter(cid => !hiddenSet.has(cid) && members[cid]);
         if (cList.length > 0) {
           const maxC = Math.max(...cList.map(cid => genRanks[cid] || 1));
@@ -1097,7 +1112,7 @@
           }
         });
 
-        // Co-parents equalization (parents sharing children)
+        // Co-parents equalization
         if (pList.length > 1) {
           const maxCoParent = Math.max(...pList.map(pid => genRanks[pid] || 1));
           pList.forEach(pid => {
@@ -1110,7 +1125,6 @@
       }
     }
 
-    // Normalize so minimum rank is strictly 1
     const minR = Math.min(...Object.values(genRanks));
     if (minR < 1 || minR > 1) {
       const shift = 1 - minR;
@@ -1122,7 +1136,68 @@
     return genRanks;
   }
 
-  // STEMMING TREE RENDER ENGINE: MATERNAL ON LEFT, PATERNAL ON RIGHT, PRECISE BOUNDS
+  // ORDER ROOTS TO RESPECT PEDIGREE HIERARCHY (MATERNAL ON LEFT, PATERNAL ON RIGHT)
+  function getOrderedRoots(visibleMembers, hiddenSet) {
+    const members = treeState.members || {};
+    // Find leaf descendants (nodes with no visible children)
+    const leaves = visibleMembers.filter(m => {
+      const validKids = (m.children || []).filter(cid => !hiddenSet.has(cid) && members[cid]);
+      return validKids.length === 0;
+    });
+
+    // Sort leaves: Female (Maternal) first, Male (Paternal) second
+    leaves.sort((a, b) => {
+      if (a.gender === 'F' && b.gender !== 'F') return -1;
+      if (b.gender === 'F' && a.gender !== 'F') return 1;
+      return 0;
+    });
+
+    const orderedRoots = [];
+    const visitedRoots = new Set();
+
+    function collectAncestryRoots(mid, visitedNodes = new Set()) {
+      if (!mid || visitedNodes.has(mid) || hiddenSet.has(mid) || !members[mid]) return [];
+      visitedNodes.add(mid);
+      const m = members[mid];
+      const validParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
+      if (validParents.length === 0) {
+        return [mid];
+      }
+      // Sort parents: Maternal (Female) first, Paternal (Male) second
+      const mothers = validParents.filter(pid => members[pid].gender === 'F');
+      const fathers = validParents.filter(pid => members[pid].gender === 'M');
+      const others = validParents.filter(pid => !mothers.includes(pid) && !fathers.includes(pid));
+      const sortedP = [...mothers, ...others, ...fathers];
+
+      const res = [];
+      sortedP.forEach(pid => {
+        collectAncestryRoots(pid, new Set(visitedNodes)).forEach(r => res.push(r));
+      });
+      return res;
+    }
+
+    leaves.forEach(leaf => {
+      collectAncestryRoots(leaf.id, new Set()).forEach(r => {
+        if (!visitedRoots.has(r)) {
+          visitedRoots.add(r);
+          orderedRoots.push(r);
+        }
+      });
+    });
+
+    // Append any isolated roots
+    const allRoots = visibleMembers.filter(m => !m.parents || m.parents.filter(pid => !hiddenSet.has(pid) && members[pid]).length === 0);
+    allRoots.forEach(r => {
+      if (!visitedRoots.has(r.id)) {
+        visitedRoots.add(r.id);
+        orderedRoots.push(r.id);
+      }
+    });
+
+    return orderedRoots.map(id => members[id]).filter(Boolean);
+  }
+
+  // STEMMING TREE RENDER ENGINE WITH NON-CROSSING PEDIGREE PLACEMENT
   function renderTree() {
     saveSession();
     updateStats();
@@ -1176,11 +1251,7 @@
       return Math.max(coupleW, childrenTotalW);
     }
 
-    // Recursive layout of a family unit:
-    // RULES:
-    // 1. Maternal (Female / Mother) strictly on the LEFT!
-    // 2. Paternal (Male / Father) strictly on the RIGHT!
-    // 3. Children arranged chronologically under centered couple.
+    // Recursive placement of a family unit:
     function placeFamilyUnit(mid, startX, visited = new Set()) {
       if (!mid || visited.has(mid) || hiddenSet.has(mid) || !members[mid]) return startX;
       visited.add(mid);
@@ -1198,11 +1269,24 @@
         }
       });
 
-      // SORT COUPLE: FEMALE (MATERNAL) ON LEFT, MALE (PATERNAL) ON RIGHT
+      // SORT COUPLE:
+      // If couple has parents already placed, sort by their parents' X positions to PREVENT CROSSING!
+      // Otherwise: Female (Maternal) on LEFT, Male (Paternal) on RIGHT!
       coupleIds.sort((idA, idB) => {
         const a = members[idA];
         const b = members[idB];
         if (!a || !b) return 0;
+        
+        // Check if either has placed parents
+        const pListA = (a.parents || []).filter(pid => nodePositions[pid]);
+        const pListB = (b.parents || []).filter(pid => nodePositions[pid]);
+        if (pListA.length > 0 && pListB.length > 0) {
+          const avgXA = pListA.reduce((sum, pid) => sum + nodePositions[pid].x, 0) / pListA.length;
+          const avgXB = pListB.reduce((sum, pid) => sum + nodePositions[pid].x, 0) / pListB.length;
+          return avgXA - avgXB; // Keeps child directly under their parents!
+        }
+        
+        // Maternal on Left, Paternal on Right
         if (a.gender === 'F' && b.gender !== 'F') return -1;
         if (b.gender === 'F' && a.gender !== 'F') return 1;
         if (a.gender !== 'M' && b.gender === 'M') return -1;
@@ -1264,31 +1348,24 @@
       return startX + subtreeW + X_GAP;
     }
 
-    // Place Roots: Maternal ancestors on LEFT, Paternal ancestors on RIGHT
+    // Place Roots using Pedigree Order (Maternal Left, Paternal Right)
     let curX = 60;
-    const roots = visibleMembers.filter(m => !m.parents || m.parents.length === 0);
-    roots.sort((a, b) => {
-      // Female / Maternal first (left), Male / Paternal second (right)
-      if (a.gender === 'F' && b.gender !== 'F') return -1;
-      if (b.gender === 'F' && a.gender !== 'F') return 1;
-      return 0;
-    });
+    const orderedRoots = getOrderedRoots(visibleMembers, hiddenSet);
 
-    const startRoots = roots.length > 0 ? roots : visibleMembers;
-    startRoots.forEach(r => {
+    orderedRoots.forEach(r => {
       if (!placed.has(r.id)) {
         curX = placeFamilyUnit(r.id, curX) + X_GAP;
       }
     });
 
-    // Place any remaining visible members neatly
+    // Place any remaining visible members
     visibleMembers.forEach(m => {
       if (!placed.has(m.id)) {
         curX = placeFamilyUnit(m.id, curX) + X_GAP;
       }
     });
 
-    // RENDER GENERATIONAL GUIDES CONFINED TO ACTUAL TREE WIDTH (AVOID LONG EXPORT ROWS)
+    // RENDER GENERATIONAL GUIDES CONFINED TO ACTUAL TREE WIDTH
     const allX = Object.values(nodePositions).map(p => p.x);
     const minTreeX = allX.length > 0 ? Math.min(...allX) - 60 : 20;
     const maxTreeX = allX.length > 0 ? Math.max(...allX) + CARD_WIDTH + 60 : 800;
@@ -1334,6 +1411,8 @@
             const strokeDash = isDivorced ? "4,3" : "6,3";
 
             linksGroup.append("line")
+              .attr("class", "lineage-link marriage-link")
+              .attr("data-couple", coupleKey)
               .attr("x1", x1)
               .attr("y1", my)
               .attr("x2", x2)
@@ -1349,6 +1428,8 @@
             else if (unionType === 'partners') symbolIcon = "🤝";
 
             linksGroup.append("text")
+              .attr("class", "marriage-icon")
+              .attr("data-couple", coupleKey)
               .attr("x", midX)
               .attr("y", my - 6)
               .attr("text-anchor", "middle")
@@ -1361,7 +1442,7 @@
       });
     });
 
-    // DRAW STEMMING TREE DESCENT FORKS TO CHILDREN WITH JUNCTION NODES
+    // DRAW CLEAN DESCENT LINES (NO OVERLAPPING FLAT BARS, INDEPENDENT CHANNELS)
     const parentGroups = {};
     visibleMembers.forEach(m => {
       const vParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
@@ -1389,50 +1470,28 @@
         return;
       }
 
-      const validChildren = childIds.filter(cid => nodePositions[cid]);
+      // Sort children by X coordinate
+      const validChildren = childIds.filter(cid => nodePositions[cid])
+        .sort((a, b) => nodePositions[a].x - nodePositions[b].x);
       if (validChildren.length === 0) return;
 
       const firstChildY = nodePositions[validChildren[0]].y;
       const forkY = anchorY + (firstChildY - anchorY) / 2;
 
-      // Vertical stem dropping from parental union
-      linksGroup.append("path")
-        .attr("d", `M ${anchorX} ${anchorY} V ${forkY}`)
-        .attr("stroke", "#38BDF8")
-        .attr("stroke-width", "2.5")
-        .attr("stroke-linecap", "round")
-        .attr("fill", "none");
+      const branchGroup = linksGroup.append("g")
+        .attr("class", "family-branch")
+        .attr("data-parents", pIds.join(","))
+        .attr("data-children", validChildren.join(","));
 
-      // Glowing stem fork junction node
-      linksGroup.append("circle")
-        .attr("cx", anchorX)
-        .attr("cy", forkY)
-        .attr("r", 4)
-        .attr("fill", "#38BDF8")
-        .attr("stroke", "#0B0F19")
-        .attr("stroke-width", "1.5");
-
-      // Horizontal descent conduit spanning children
-      const childCenterXs = validChildren.map(cid => nodePositions[cid].x + CARD_WIDTH / 2);
-      const minCX = Math.min(anchorX, ...childCenterXs);
-      const maxCX = Math.max(anchorX, ...childCenterXs);
-
-      linksGroup.append("path")
-        .attr("d", `M ${minCX} ${forkY} H ${maxCX}`)
-        .attr("stroke", "#64748B")
-        .attr("stroke-width", "2.5")
-        .attr("stroke-linecap", "round")
-        .attr("fill", "none");
-
-      // Vertical drops into each child with junction dots
-      validChildren.forEach(cid => {
+      // CASE 1: EXACTLY ONE CHILD (DIRECT ORTHOGONAL STEP OR STRAIGHT DROP, NO LONG FORK!)
+      if (validChildren.length === 1) {
+        const cid = validChildren[0];
         const cPos = nodePositions[cid];
         const childObj = members[cid];
         const cX = cPos.x + CARD_WIDTH / 2;
 
         let strokeDash = "none";
-        let strokeColor = "#64748B";
-
+        let strokeColor = "#38BDF8";
         if (childObj && childObj.relation_type === 'adopted') {
           strokeDash = "6,4";
           strokeColor = "#A78BFA";
@@ -1444,24 +1503,115 @@
           strokeColor = "#F59E0B";
         }
 
-        const dropPath = linksGroup.append("path")
-          .attr("d", `M ${cX} ${forkY} V ${cPos.y}`)
+        let pathD;
+        if (Math.abs(anchorX - cX) <= 6) {
+          // Perfectly straight vertical line from parents to child!
+          pathD = `M ${anchorX} ${anchorY} V ${cPos.y}`;
+        } else {
+          // Clean 2-step orthogonal elbow line directly from anchor to child
+          pathD = `M ${anchorX} ${anchorY} V ${forkY} H ${cX} V ${cPos.y}`;
+        }
+
+        const pEl = branchGroup.append("path")
+          .attr("class", "lineage-link descent-link")
+          .attr("d", pathD)
           .attr("stroke", strokeColor)
           .attr("stroke-width", "2.5")
           .attr("stroke-linecap", "round")
           .attr("fill", "none");
 
         if (strokeDash !== "none") {
-          dropPath.attr("stroke-dasharray", strokeDash);
+          pEl.attr("stroke-dasharray", strokeDash);
         }
 
-        // Branch junction dot leading into child
-        linksGroup.append("circle")
+        // Child inlet connection dot
+        branchGroup.append("circle")
           .attr("cx", cX)
-          .attr("cy", forkY)
-          .attr("r", 3)
+          .attr("cy", cPos.y)
+          .attr("r", 3.5)
           .attr("fill", strokeColor);
-      });
+
+      } else {
+        // CASE 2: MULTIPLE CHILDREN (SIBLINGS)
+        // Vertical stem from parents down to fork level
+        branchGroup.append("path")
+          .attr("class", "lineage-link descent-stem")
+          .attr("d", `M ${anchorX} ${anchorY} V ${forkY}`)
+          .attr("stroke", "#38BDF8")
+          .attr("stroke-width", "2.5")
+          .attr("stroke-linecap", "round")
+          .attr("fill", "none");
+
+        // Glowing junction node at fork
+        branchGroup.append("circle")
+          .attr("cx", anchorX)
+          .attr("cy", forkY)
+          .attr("r", 4)
+          .attr("fill", "#38BDF8")
+          .attr("stroke", "#0B0F19")
+          .attr("stroke-width", "1.5");
+
+        // Sibling bar spans ONLY between first child and last child of THIS couple!
+        const childCenterXs = validChildren.map(cid => nodePositions[cid].x + CARD_WIDTH / 2);
+        const minKidX = Math.min(...childCenterXs);
+        const maxKidX = Math.max(...childCenterXs);
+        const barStartX = Math.min(anchorX, minKidX);
+        const barEndX = Math.max(anchorX, maxKidX);
+
+        branchGroup.append("path")
+          .attr("class", "lineage-link sibling-bar")
+          .attr("d", `M ${barStartX} ${forkY} H ${barEndX}`)
+          .attr("stroke", "#64748B")
+          .attr("stroke-width", "2.5")
+          .attr("stroke-linecap", "round")
+          .attr("fill", "none");
+
+        // Drop line into each sibling child
+        validChildren.forEach(cid => {
+          const cPos = nodePositions[cid];
+          const childObj = members[cid];
+          const cX = cPos.x + CARD_WIDTH / 2;
+
+          let strokeDash = "none";
+          let strokeColor = "#64748B";
+
+          if (childObj && childObj.relation_type === 'adopted') {
+            strokeDash = "6,4";
+            strokeColor = "#A78BFA";
+          } else if (childObj && childObj.relation_type === 'foster') {
+            strokeDash = "2,3";
+            strokeColor = "#38BDF8";
+          } else if (childObj && childObj.relation_type === 'step') {
+            strokeDash = "4,4";
+            strokeColor = "#F59E0B";
+          }
+
+          const dropPath = branchGroup.append("path")
+            .attr("class", "lineage-link child-drop")
+            .attr("d", `M ${cX} ${forkY} V ${cPos.y}`)
+            .attr("stroke", strokeColor)
+            .attr("stroke-width", "2.5")
+            .attr("stroke-linecap", "round")
+            .attr("fill", "none");
+
+          if (strokeDash !== "none") {
+            dropPath.attr("stroke-dasharray", strokeDash);
+          }
+
+          // Branch junction dot leading into child
+          branchGroup.append("circle")
+            .attr("cx", cX)
+            .attr("cy", forkY)
+            .attr("r", 3)
+            .attr("fill", strokeColor);
+
+          branchGroup.append("circle")
+            .attr("cx", cX)
+            .attr("cy", cPos.y)
+            .attr("r", 3.5)
+            .attr("fill", strokeColor);
+        });
+      }
     });
 
     // DRAW VISIBLE MEMBER CARDS
@@ -1479,6 +1629,7 @@
         .attr("transform", `translate(${pos.x}, ${pos.y})`)
         .style("cursor", "pointer")
         .on("mouseenter", (e) => {
+          highlightMemberLineage(m.id);
           const b = m.birth_date || "?";
           const lifespan = m.is_living ? `b. ${b} (Living)` : `${b} — †${m.death_date || '?'}`;
           const mName = m.middle_name ? `${m.middle_name} ` : '';
@@ -1495,6 +1646,7 @@
           tooltip.style.top = (e.clientY + 14) + "px";
         })
         .on("mouseleave", () => {
+          resetLineageHighlight();
           tooltip.style.display = "none";
         })
         .on("click", (e) => {
@@ -1506,6 +1658,7 @@
       const strokeWidth = isSelected ? "3.5" : "1.5";
 
       card.append("rect")
+        .attr("class", "card-frame")
         .attr("width", CARD_WIDTH)
         .attr("height", CARD_HEIGHT)
         .attr("rx", 10).attr("ry", 10)
@@ -1619,6 +1772,89 @@
           .text(`▶ Expand Lineage (${hiddenCount} hidden)`);
       }
     });
+
+    if (selectedMemberId) {
+      highlightMemberLineage(selectedMemberId);
+    }
+  }
+
+  // INTERACTIVE LINEAGE HIGHLIGHTING: HIGHLIGHTS PARENTS, CHILDREN & SPOUSES
+  function highlightMemberLineage(mid) {
+    if (!mid || !treeState.members[mid]) return;
+    hoveredMemberId = mid;
+    const m = treeState.members[mid];
+    const parentSet = new Set(m.parents || []);
+    const childrenSet = new Set(m.children || []);
+    const spouseSet = new Set(m.spouses || []);
+
+    // Dim all lines first
+    linksGroup.selectAll(".lineage-link").style("opacity", "0.15").style("filter", "none");
+    linksGroup.selectAll(".marriage-icon").style("opacity", "0.25");
+
+    // Highlight direct marriage links
+    linksGroup.selectAll(".marriage-link").each(function() {
+      const coupleKey = d3.select(this).attr("data-couple");
+      if (coupleKey && coupleKey.includes(mid)) {
+        d3.select(this)
+          .style("opacity", "1")
+          .attr("stroke", "#FACC15")
+          .attr("stroke-width", "4.5")
+          .style("filter", "url(#line-glow)");
+      }
+    });
+
+    linksGroup.selectAll(".marriage-icon").each(function() {
+      const coupleKey = d3.select(this).attr("data-couple");
+      if (coupleKey && coupleKey.includes(mid)) {
+        d3.select(this).style("opacity", "1").attr("fill", "#FACC15");
+      }
+    });
+
+    // Highlight family descent branches connecting to this member
+    linksGroup.selectAll(".family-branch").each(function() {
+      const pStr = d3.select(this).attr("data-parents") || "";
+      const cStr = d3.select(this).attr("data-children") || "";
+      const pList = pStr.split(",");
+      const cList = cStr.split(",");
+
+      const isParentBranch = pList.includes(mid); // Lines to this member's children
+      const isChildBranch = cList.includes(mid);   // Lines to this member's parents
+
+      if (isParentBranch) {
+        // Bright amber for descent to children
+        d3.select(this).selectAll(".lineage-link")
+          .style("opacity", "1")
+          .attr("stroke", "#F59E0B")
+          .attr("stroke-width", "3.5")
+          .style("filter", "url(#line-glow)");
+        d3.select(this).selectAll("circle")
+          .attr("fill", "#F59E0B")
+          .style("opacity", "1");
+      } else if (isChildBranch) {
+        // Glowing cyan for ascent to parents
+        d3.select(this).selectAll(".lineage-link")
+          .style("opacity", "1")
+          .attr("stroke", "#38BDF8")
+          .attr("stroke-width", "3.5")
+          .style("filter", "url(#line-glow)");
+        d3.select(this).selectAll("circle")
+          .attr("fill", "#38BDF8")
+          .style("opacity", "1");
+      }
+    });
+  }
+
+  function resetLineageHighlight() {
+    hoveredMemberId = null;
+    if (selectedMemberId && treeState.members[selectedMemberId]) {
+      highlightMemberLineage(selectedMemberId);
+      return;
+    }
+    // Restore all links to standard styles
+    linksGroup.selectAll(".lineage-link")
+      .style("opacity", "1")
+      .style("filter", "none");
+    linksGroup.selectAll(".marriage-icon").style("opacity", "1");
   }
 
   function updateStats() {
@@ -1835,7 +2071,6 @@
       titleEl.textContent = `👴 Add Parent of ${sel ? sel.first_name : ''}`;
       lnInput.value = sel ? sel.last_name : "";
       mnInput.value = "";
-      // If child already has a male parent, suggest female; if has female, suggest male
       const hasMaleParent = sel && (sel.parents || []).some(pid => treeState.members[pid] && treeState.members[pid].gender === 'M');
       const hasFemaleParent = sel && (sel.parents || []).some(pid => treeState.members[pid] && treeState.members[pid].gender === 'F');
       if (hasMaleParent && !hasFemaleParent) genderSel.value = "F";
@@ -1845,7 +2080,6 @@
       titleEl.textContent = `💍 Add Spouse / Partner of ${sel ? sel.first_name : ''}`;
       lnInput.value = "";
       mnInput.value = "";
-      // Suggest opposite gender of partner
       if (sel && sel.gender === 'M') genderSel.value = "F";
       else if (sel && sel.gender === 'F') genderSel.value = "M";
       else genderSel.value = "O";
@@ -1926,7 +2160,6 @@
       if (!sel.parents.includes(newId)) sel.parents.push(newId);
       newMember.children.push(sel.id);
 
-      // Connect new parent with existing parents as spouses and share siblings
       existingParents.forEach(epId => {
         const ep = treeState.members[epId];
         if (ep) {
@@ -1934,7 +2167,6 @@
           if (!newMember.spouses.includes(epId)) newMember.spouses.push(epId);
           ep.spouse_unions[newId] = "married";
           newMember.spouse_unions[epId] = "married";
-          // Also share other children of existing parent
           (ep.children || []).forEach(cid => {
             if (!newMember.children.includes(cid)) newMember.children.push(cid);
             const coChild = treeState.members[cid];
@@ -1942,7 +2174,6 @@
           });
         }
       });
-      // If sel was root, update tree root to the new parent
       if (treeState.root_id === sel.id) {
         treeState.root_id = newId;
       }
@@ -2002,7 +2233,7 @@
 
       treeState.members[fatherId] = father;
       treeState.members[motherId] = mother;
-      newMember.parents = [motherId, fatherId];
+      newMember.parents = [motherId, fatherId]; // Mother left, Father right
       if (pendingAddType === 'root') treeState.root_id = fatherId;
     }
 
@@ -2080,7 +2311,6 @@
     const nBBox = nodesNode.getBBox();
     const lBBox = linksGroup.selectAll("*").empty() ? nBBox : linksNode.getBBox();
 
-    // Tight padding around actual cards and branches
     const pad = 42;
     const minX = Math.min(nBBox.x, lBBox.x) - pad;
     const minY = Math.min(nBBox.y, lBBox.y) - pad;
@@ -2096,13 +2326,11 @@
     clone.setAttribute("height", totalH);
     clone.setAttribute("viewBox", `${minX} ${minY} ${totalW} ${totalH}`);
 
-    // Remove zoom/pan transform from clone
     const clonedMainGroup = clone.querySelector("#main-group");
     if (clonedMainGroup) {
       clonedMainGroup.removeAttribute("transform");
     }
 
-    // Insert dark background sized exactly to cropped canvas
     const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     bg.setAttribute("x", minX);
     bg.setAttribute("y", minY);
@@ -2117,7 +2345,7 @@
     return { svgString, width: totalW, height: totalH };
   }
 
-  // PNG EXPORT (CROPPED TO EXACT TREE BOUNDS)
+  // PNG EXPORT
   document.getElementById("btn-png").addEventListener("click", () => {
     const exportData = prepareCleanSvgForExport();
     if (!exportData) {
@@ -2132,7 +2360,7 @@
 
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const scale = 2; // high-DPI
+      const scale = 2;
       canvas.width = width * scale;
       canvas.height = height * scale;
       const ctx = canvas.getContext("2d");
@@ -2149,7 +2377,7 @@
     img.src = url;
   });
 
-  // PDF EXPORT (CROPPED TO EXACT TREE BOUNDS)
+  // PDF EXPORT
   document.getElementById("btn-pdf").addEventListener("click", () => {
     const exportData = prepareCleanSvgForExport();
     if (!exportData) {
