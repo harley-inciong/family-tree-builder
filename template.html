@@ -559,6 +559,12 @@
         </div>
 
         <div style="margin-bottom: 8px; border-top:1px solid #334155; padding-top:6px;">
+          <div style="font-size: 11px; color:#94A3B8; font-weight:600; margin-bottom:4px;">👥 Siblings:</div>
+          <div class="rel-badges" id="drawer-siblings-list"></div>
+          <button class="btn" style="padding:2px 8px; font-size:11px;" id="btn-quick-add-sibling">➕ Add Sibling</button>
+        </div>
+
+        <div style="margin-bottom: 8px; border-top:1px solid #334155; padding-top:6px;">
           <div style="font-size: 11px; color:#94A3B8; font-weight:600; margin-bottom:4px;">💍 Spouse / Partner:</div>
           <div class="rel-badges" id="drawer-spouses-list"></div>
           <button class="btn" style="padding:2px 8px; font-size:11px;" id="btn-quick-add-spouse">➕ Add Spouse</button>
@@ -1022,41 +1028,62 @@
     });
   svg.call(zoom);
 
-  // Helper to count descendants
+  // Helper to count descendants and in-law spouses hidden by collapsing mid
   function countAllDescendants(mid) {
-    let count = 0;
-    const visited = new Set();
-    function walk(id) {
+    const hidden = new Set();
+    function hideSubtree(id) {
+      if (!id || hidden.has(id) || !treeState.members[id]) return;
+      hidden.add(id);
       const m = treeState.members[id];
-      if (!m) return;
-      (m.children || []).forEach(cid => {
-        if (!visited.has(cid)) {
-          visited.add(cid);
-          count++;
-          walk(cid);
+      (m.spouses || []).forEach(spId => {
+        if (!hidden.has(spId) && treeState.members[spId]) {
+          hidden.add(spId);
+          (treeState.members[spId].children || []).forEach(cid => hideSubtree(cid));
         }
       });
+      (m.children || []).forEach(cid => hideSubtree(cid));
     }
-    walk(mid);
-    return count;
+
+    const m = treeState.members[mid];
+    if (!m) return 0;
+    const directChildren = new Set(m.children || []);
+    (m.spouses || []).forEach(spId => {
+      const sp = treeState.members[spId];
+      if (sp) (sp.children || []).forEach(cid => directChildren.add(cid));
+    });
+    directChildren.forEach(cid => hideSubtree(cid));
+    return hidden.size;
   }
 
   // Determine hidden members due to collapsed branches
+  // When a branch is collapsed, all descendants AND their spouses are hidden!
   function getHiddenMemberIds() {
     const hidden = new Set();
-    function hideSubtree(mid) {
-      const m = treeState.members[mid];
-      if (!m) return;
-      (m.children || []).forEach(cid => {
-        if (!hidden.has(cid)) {
-          hidden.add(cid);
-          hideSubtree(cid);
+    function hideSubtreeAndSpouses(descId) {
+      if (!descId || hidden.has(descId) || !treeState.members[descId]) return;
+      hidden.add(descId);
+      const dm = treeState.members[descId];
+      (dm.spouses || []).forEach(spId => {
+        if (!hidden.has(spId) && treeState.members[spId]) {
+          hidden.add(spId);
+          (treeState.members[spId].children || []).forEach(scid => hideSubtreeAndSpouses(scid));
         }
       });
+      (dm.children || []).forEach(cid => {
+        hideSubtreeAndSpouses(cid);
+      });
     }
+
     Object.values(treeState.members || {}).forEach(m => {
       if (m.is_collapsed) {
-        hideSubtree(m.id);
+        const directChildren = new Set(m.children || []);
+        (m.spouses || []).forEach(spId => {
+          const sp = treeState.members[spId];
+          if (sp) {
+            (sp.children || []).forEach(cid => directChildren.add(cid));
+          }
+        });
+        directChildren.forEach(cid => hideSubtreeAndSpouses(cid));
       }
     });
     return hidden;
@@ -1074,18 +1101,16 @@
 
     let changed = true;
     let iters = 0;
-    while (changed && iters < 40) {
+    while (changed && iters < 50) {
       changed = false;
       iters++;
 
       for (const m of visibleMembers) {
-        const curR = genRanks[m.id] || 1;
-
         // Downward: rank(Child) >= max(rank(Parent)) + 1
         const pList = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
         if (pList.length > 0) {
           const maxP = Math.max(...pList.map(pid => genRanks[pid] || 1));
-          if (curR < maxP + 1) {
+          if (genRanks[m.id] < maxP + 1) {
             genRanks[m.id] = maxP + 1;
             changed = true;
           }
@@ -1095,7 +1120,7 @@
         const cList = (m.children || []).filter(cid => !hiddenSet.has(cid) && members[cid]);
         if (cList.length > 0) {
           const maxC = Math.max(...cList.map(cid => genRanks[cid] || 1));
-          if (curR < maxC - 1) {
+          if (genRanks[m.id] < maxC - 1) {
             genRanks[m.id] = maxC - 1;
             changed = true;
           }
@@ -1107,8 +1132,8 @@
             const r1 = genRanks[m.id] || 1;
             const r2 = genRanks[spId] || 1;
             const target = Math.max(r1, r2);
-            if (r1 !== target) { genRanks[m.id] = target; changed = true; }
-            if (r2 !== target) { genRanks[spId] = target; changed = true; }
+            if (genRanks[m.id] !== target) { genRanks[m.id] = target; changed = true; }
+            if (genRanks[spId] !== target) { genRanks[spId] = target; changed = true; }
           }
         });
 
@@ -1126,7 +1151,7 @@
     }
 
     const minR = Math.min(...Object.values(genRanks));
-    if (minR < 1 || minR > 1) {
+    if (minR !== 1) {
       const shift = 1 - minR;
       Object.keys(genRanks).forEach(id => {
         genRanks[id] += shift;
@@ -1136,65 +1161,23 @@
     return genRanks;
   }
 
-  // ORDER ROOTS TO RESPECT PEDIGREE HIERARCHY (MATERNAL ON LEFT, PATERNAL ON RIGHT)
-  function getOrderedRoots(visibleMembers, hiddenSet) {
+  // ORDER ROOTS TO RESPECT PEDIGREE HIERARCHY (GEN 1 ROOTS: MATERNAL ON LEFT, PATERNAL ON RIGHT)
+  function getOrderedRoots(visibleMembers, hiddenSet, genRanks) {
     const members = treeState.members || {};
-    // Find leaf descendants (nodes with no visible children)
-    const leaves = visibleMembers.filter(m => {
-      const validKids = (m.children || []).filter(cid => !hiddenSet.has(cid) && members[cid]);
-      return validKids.length === 0;
+    const gen1Roots = visibleMembers.filter(m => {
+      const vParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
+      return vParents.length === 0 && (genRanks[m.id] || 1) === 1;
     });
 
-    // Sort leaves: Female (Maternal) first, Male (Paternal) second
-    leaves.sort((a, b) => {
+    gen1Roots.sort((a, b) => {
       if (a.gender === 'F' && b.gender !== 'F') return -1;
       if (b.gender === 'F' && a.gender !== 'F') return 1;
+      if (a.gender !== 'M' && b.gender === 'M') return -1;
+      if (b.gender !== 'M' && a.gender === 'M') return 1;
       return 0;
     });
 
-    const orderedRoots = [];
-    const visitedRoots = new Set();
-
-    function collectAncestryRoots(mid, visitedNodes = new Set()) {
-      if (!mid || visitedNodes.has(mid) || hiddenSet.has(mid) || !members[mid]) return [];
-      visitedNodes.add(mid);
-      const m = members[mid];
-      const validParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
-      if (validParents.length === 0) {
-        return [mid];
-      }
-      // Sort parents: Maternal (Female) first, Paternal (Male) second
-      const mothers = validParents.filter(pid => members[pid].gender === 'F');
-      const fathers = validParents.filter(pid => members[pid].gender === 'M');
-      const others = validParents.filter(pid => !mothers.includes(pid) && !fathers.includes(pid));
-      const sortedP = [...mothers, ...others, ...fathers];
-
-      const res = [];
-      sortedP.forEach(pid => {
-        collectAncestryRoots(pid, new Set(visitedNodes)).forEach(r => res.push(r));
-      });
-      return res;
-    }
-
-    leaves.forEach(leaf => {
-      collectAncestryRoots(leaf.id, new Set()).forEach(r => {
-        if (!visitedRoots.has(r)) {
-          visitedRoots.add(r);
-          orderedRoots.push(r);
-        }
-      });
-    });
-
-    // Append any isolated roots
-    const allRoots = visibleMembers.filter(m => !m.parents || m.parents.filter(pid => !hiddenSet.has(pid) && members[pid]).length === 0);
-    allRoots.forEach(r => {
-      if (!visitedRoots.has(r.id)) {
-        visitedRoots.add(r.id);
-        orderedRoots.push(r.id);
-      }
-    });
-
-    return orderedRoots.map(id => members[id]).filter(Boolean);
+    return gen1Roots;
   }
 
   // STEMMING TREE RENDER ENGINE WITH NON-CROSSING PEDIGREE PLACEMENT
@@ -1217,29 +1200,46 @@
     const placed = new Set();
     const processedCouples = new Set();
 
+    // Helper: identify in-law spouses (spouses with no visible parents in tree)
+    function getInLawSpouses(mid, visited = new Set()) {
+      const m = members[mid];
+      if (!m) return [];
+      const inLaws = [];
+      (m.spouses || []).forEach(spId => {
+        if (!hiddenSet.has(spId) && members[spId] && !visited.has(spId) && !placed.has(spId)) {
+          const sp = members[spId];
+          const spParents = (sp.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
+          if (spParents.length === 0) {
+            inLaws.push(spId);
+          }
+        }
+      });
+      return inLaws;
+    }
+
     // Helper: calculate total bounding width of a member and their descendants
     function calculateSubtreeWidth(mid, visited = new Set()) {
       if (!mid || visited.has(mid) || hiddenSet.has(mid) || !members[mid]) return 0;
       visited.add(mid);
       const m = members[mid];
 
-      const visibleSpouses = (m.spouses || []).filter(sp => !hiddenSet.has(sp) && members[sp] && !visited.has(sp));
-      const coupleCount = 1 + visibleSpouses.length;
-      const coupleW = coupleCount * CARD_WIDTH + (coupleCount - 1) * SPOUSE_GAP;
+      const inLaws = getInLawSpouses(mid, visited);
+      const unitCount = 1 + inLaws.length;
+      const unitW = unitCount * CARD_WIDTH + (unitCount - 1) * SPOUSE_GAP;
 
       if (m.is_collapsed) {
-        return coupleW;
+        return unitW;
       }
 
-      // Collect shared children
+      // Collect children
       const allChildren = new Set(m.children || []);
-      visibleSpouses.forEach(sp => {
-        (members[sp].children || []).forEach(cid => allChildren.add(cid));
+      inLaws.forEach(spId => {
+        (members[spId].children || []).forEach(cid => allChildren.add(cid));
       });
 
       const validChildren = Array.from(allChildren).filter(cid => !hiddenSet.has(cid) && members[cid]);
       if (validChildren.length === 0) {
-        return coupleW;
+        return unitW;
       }
 
       let childrenTotalW = 0;
@@ -1248,10 +1248,10 @@
         if (idx < validChildren.length - 1) childrenTotalW += X_GAP;
       });
 
-      return Math.max(coupleW, childrenTotalW);
+      return Math.max(unitW, childrenTotalW);
     }
 
-    // Recursive placement of a family unit:
+    // Recursive placement of a family unit (keeps siblings clustered and contiguous!)
     function placeFamilyUnit(mid, startX, visited = new Set()) {
       if (!mid || visited.has(mid) || hiddenSet.has(mid) || !members[mid]) return startX;
       visited.add(mid);
@@ -1260,33 +1260,20 @@
       const gen = genRanks[mid] || 1;
       const y = (gen - 1) * (CARD_HEIGHT + Y_GAP) + 80;
 
-      // Gather couple members
-      const coupleIds = [mid];
-      (m.spouses || []).forEach(spId => {
-        if (!hiddenSet.has(spId) && members[spId] && !visited.has(spId) && !coupleIds.includes(spId)) {
-          coupleIds.push(spId);
-          visited.add(spId);
-        }
+      // Gather unit members: mid and in-law spouses
+      const unitMembers = [mid];
+      const inLaws = getInLawSpouses(mid, visited);
+      inLaws.forEach(spId => {
+        unitMembers.push(spId);
+        visited.add(spId);
       });
 
-      // SORT COUPLE:
-      // If couple has parents already placed, sort by their parents' X positions to PREVENT CROSSING!
-      // Otherwise: Female (Maternal) on LEFT, Male (Paternal) on RIGHT!
-      coupleIds.sort((idA, idB) => {
+      // SORT UNIT:
+      // Maternal (Female) on LEFT, Paternal (Male) on RIGHT!
+      unitMembers.sort((idA, idB) => {
         const a = members[idA];
         const b = members[idB];
         if (!a || !b) return 0;
-        
-        // Check if either has placed parents
-        const pListA = (a.parents || []).filter(pid => nodePositions[pid]);
-        const pListB = (b.parents || []).filter(pid => nodePositions[pid]);
-        if (pListA.length > 0 && pListB.length > 0) {
-          const avgXA = pListA.reduce((sum, pid) => sum + nodePositions[pid].x, 0) / pListA.length;
-          const avgXB = pListB.reduce((sum, pid) => sum + nodePositions[pid].x, 0) / pListB.length;
-          return avgXA - avgXB; // Keeps child directly under their parents!
-        }
-        
-        // Maternal on Left, Paternal on Right
         if (a.gender === 'F' && b.gender !== 'F') return -1;
         if (b.gender === 'F' && a.gender !== 'F') return 1;
         if (a.gender !== 'M' && b.gender === 'M') return -1;
@@ -1294,15 +1281,15 @@
         return 0;
       });
 
-      const coupleCount = coupleIds.length;
-      const coupleW = coupleCount * CARD_WIDTH + (coupleCount - 1) * SPOUSE_GAP;
+      const unitCount = unitMembers.length;
+      const unitW = unitCount * CARD_WIDTH + (unitCount - 1) * SPOUSE_GAP;
 
-      // Collect all shared children
+      // Collect children
       const allChildren = new Set();
-      coupleIds.forEach(id => {
+      unitMembers.forEach(id => {
         (members[id].children || []).forEach(cid => allChildren.add(cid));
       });
-      const validChildren = Array.from(allChildren).filter(cid => !hiddenSet.has(cid) && members[cid]);
+      const validChildren = Array.from(allChildren).filter(cid => !hiddenSet.has(cid) && members[cid] && !placed.has(cid));
 
       // Sort children chronologically (oldest on left, youngest on right)
       validChildren.sort((aId, bId) => {
@@ -1322,18 +1309,18 @@
         });
       }
 
-      const subtreeW = Math.max(coupleW, childrenTotalW);
+      const subtreeW = Math.max(unitW, childrenTotalW);
 
-      // Center the couple within subtree width
-      const coupleStartX = startX + (subtreeW - coupleW) / 2;
-      let curCoupleX = coupleStartX;
-      coupleIds.forEach(id => {
-        nodePositions[id] = { x: curCoupleX, y: y };
+      // Center the couple unit within subtree width
+      const unitStartX = startX + (subtreeW - unitW) / 2;
+      let curUnitX = unitStartX;
+      unitMembers.forEach(id => {
+        nodePositions[id] = { x: curUnitX, y: y };
         placed.add(id);
-        curCoupleX += CARD_WIDTH + SPOUSE_GAP;
+        curUnitX += CARD_WIDTH + SPOUSE_GAP;
       });
 
-      // Place Children centered under couple
+      // Place Children centered under couple unit
       if (!m.is_collapsed && validChildren.length > 0) {
         let childCurX = startX + (subtreeW - childrenTotalW) / 2;
         validChildren.forEach(cid => {
@@ -1348,9 +1335,9 @@
       return startX + subtreeW + X_GAP;
     }
 
-    // Place Roots using Pedigree Order (Maternal Left, Paternal Right)
+    // Place Roots using Pedigree Order (Gen 1 Roots: Maternal Left, Paternal Right)
     let curX = 60;
-    const orderedRoots = getOrderedRoots(visibleMembers, hiddenSet);
+    const orderedRoots = getOrderedRoots(visibleMembers, hiddenSet, genRanks);
 
     orderedRoots.forEach(r => {
       if (!placed.has(r.id)) {
@@ -1358,7 +1345,7 @@
       }
     });
 
-    // Place any remaining visible members
+    // Place any remaining visible members (handles secondary roots, independent branches)
     visibleMembers.forEach(m => {
       if (!placed.has(m.id)) {
         curX = placeFamilyUnit(m.id, curX) + X_GAP;
@@ -1747,29 +1734,36 @@
 
       // TRUE COLLAPSE PILL (ACTUALLY COLLAPSES AND CONTRACTS)
       if (m.is_collapsed) {
-        const hiddenCount = countAllDescendants(m.id);
-        const pill = nodesGroup.append("g")
-          .attr("transform", `translate(${pos.x + 8}, ${pos.y + CARD_HEIGHT + 10})`)
-          .style("cursor", "pointer")
-          .on("click", (e) => {
-            e.stopPropagation();
-            pushStateToHistory();
-            m.is_collapsed = false;
-            renderTree();
-          });
+        const vSpouses = (m.spouses || []).filter(spId => !hiddenSet.has(spId) && members[spId] && nodePositions[spId]);
+        const hasLeftSpouse = vSpouses.some(spId => members[spId].is_collapsed && nodePositions[spId].x < pos.x);
+        if (!hasLeftSpouse) {
+          const hiddenCount = countAllDescendants(m.id);
+          const pill = nodesGroup.append("g")
+            .attr("transform", `translate(${pos.x + 8}, ${pos.y + CARD_HEIGHT + 10})`)
+            .style("cursor", "pointer")
+            .on("click", (e) => {
+              e.stopPropagation();
+              pushStateToHistory();
+              m.is_collapsed = false;
+              (m.spouses || []).forEach(spId => {
+                if (treeState.members[spId]) treeState.members[spId].is_collapsed = false;
+              });
+              renderTree();
+            });
 
-        pill.append("rect")
-          .attr("width", CARD_WIDTH - 16).attr("height", 26)
-          .attr("rx", 13).attr("ry", 13)
-          .attr("fill", "#312E81")
-          .attr("stroke", "#818CF8").attr("stroke-width", "1.5");
+          pill.append("rect")
+            .attr("width", CARD_WIDTH - 16).attr("height", 26)
+            .attr("rx", 13).attr("ry", 13)
+            .attr("fill", "#312E81")
+            .attr("stroke", "#818CF8").attr("stroke-width", "1.5");
 
-        pill.append("text")
-          .attr("x", (CARD_WIDTH - 16) / 2).attr("y", 17)
-          .attr("text-anchor", "middle")
-          .attr("fill", "#E0E7FF")
-          .attr("font-size", "10px").attr("font-weight", "600")
-          .text(`▶ Expand Lineage (${hiddenCount} hidden)`);
+          pill.append("text")
+            .attr("x", (CARD_WIDTH - 16) / 2).attr("y", 17)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#E0E7FF")
+            .attr("font-size", "10px").attr("font-weight", "600")
+            .text(`▶ Expand Lineage (${hiddenCount} hidden)`);
+        }
       }
     });
 
@@ -1901,7 +1895,19 @@
 
     document.getElementById("btn-toggle-collapse").textContent = m.is_collapsed ? "📂 Expand Branch" : "🗂️ Collapse Branch";
 
+    // Siblings of m: other children sharing parents with m
+    const siblingSet = new Set();
+    (m.parents || []).forEach(pid => {
+      const p = treeState.members[pid];
+      if (p) {
+        (p.children || []).forEach(cid => {
+          if (cid !== m.id && treeState.members[cid]) siblingSet.add(cid);
+        });
+      }
+    });
+
     populateRelList("drawer-parents-list", m.parents || []);
+    populateRelList("drawer-siblings-list", Array.from(siblingSet));
     populateRelList("drawer-spouses-list", m.spouses || []);
     populateRelList("drawer-children-list", m.children || []);
 
@@ -2013,7 +2019,11 @@
     if (!selectedMemberId || !treeState.members[selectedMemberId]) return;
     pushStateToHistory();
     const m = treeState.members[selectedMemberId];
-    m.is_collapsed = !m.is_collapsed;
+    const newState = !m.is_collapsed;
+    m.is_collapsed = newState;
+    (m.spouses || []).forEach(spId => {
+      if (treeState.members[spId]) treeState.members[spId].is_collapsed = newState;
+    });
     renderTree();
     selectMember(selectedMemberId);
   });
@@ -2062,6 +2072,11 @@
       lnInput.value = "";
       mnInput.value = "";
       genderSel.value = "M";
+    } else if (type === 'sibling') {
+      titleEl.textContent = `👥 Add Sibling of ${sel ? sel.first_name : ''}`;
+      lnInput.value = sel ? sel.last_name : "";
+      mnInput.value = sel ? sel.middle_name : "";
+      genderSel.value = "M";
     } else if (type === 'child') {
       titleEl.textContent = `👶 Add Child to ${sel ? sel.first_name : ''}`;
       lnInput.value = sel ? sel.last_name : "";
@@ -2096,6 +2111,7 @@
 
   document.getElementById("btn-add-root").addEventListener("click", () => openAddModal('root'));
   document.getElementById("btn-quick-add-parent").addEventListener("click", () => openAddModal('parent'));
+  document.getElementById("btn-quick-add-sibling").addEventListener("click", () => openAddModal('sibling'));
   document.getElementById("btn-quick-add-spouse").addEventListener("click", () => openAddModal('spouse'));
   document.getElementById("btn-quick-add-child").addEventListener("click", () => openAddModal('child'));
 
@@ -2155,9 +2171,49 @@
           }
         }
       }
+      newMember.parents.sort((pA, pB) => {
+        const mA = treeState.members[pA];
+        const mB = treeState.members[pB];
+        if (!mA || !mB) return 0;
+        if (mA.gender === 'F' && mB.gender !== 'F') return -1;
+        if (mB.gender === 'F' && mA.gender !== 'F') return 1;
+        return 0;
+      });
+    } else if (pendingAddType === 'sibling' && sel) {
+      const pList = [...(sel.parents || [])];
+      pList.forEach(pid => {
+        const p = treeState.members[pid];
+        if (p) {
+          if (!p.children.includes(newId)) p.children.push(newId);
+          newMember.parents.push(pid);
+        }
+      });
+      newMember.parents.sort((pA, pB) => {
+        const mA = treeState.members[pA];
+        const mB = treeState.members[pB];
+        if (!mA || !mB) return 0;
+        if (mA.gender === 'F' && mB.gender !== 'F') return -1;
+        if (mB.gender === 'F' && mA.gender !== 'F') return 1;
+        return 0;
+      });
     } else if (pendingAddType === 'parent' && sel) {
       const existingParents = [...(sel.parents || [])];
-      if (!sel.parents.includes(newId)) sel.parents.push(newId);
+      if (!sel.parents.includes(newId)) {
+        if (newMember.gender === 'F') {
+          sel.parents.unshift(newId);
+        } else {
+          sel.parents.push(newId);
+        }
+      }
+      sel.parents.sort((pA, pB) => {
+        const mA = treeState.members[pA];
+        const mB = treeState.members[pB];
+        if (!mA || !mB) return 0;
+        if (mA.gender === 'F' && mB.gender !== 'F') return -1;
+        if (mB.gender === 'F' && mA.gender !== 'F') return 1;
+        return 0;
+      });
+
       newMember.children.push(sel.id);
 
       existingParents.forEach(epId => {
@@ -2165,6 +2221,8 @@
         if (ep) {
           if (!ep.spouses.includes(newId)) ep.spouses.push(newId);
           if (!newMember.spouses.includes(epId)) newMember.spouses.push(epId);
+          ep.spouse_unions = ep.spouse_unions || {};
+          newMember.spouse_unions = newMember.spouse_unions || {};
           ep.spouse_unions[newId] = "married";
           newMember.spouse_unions[epId] = "married";
           (ep.children || []).forEach(cid => {
@@ -2180,6 +2238,8 @@
     } else if (pendingAddType === 'spouse' && sel) {
       if (!sel.spouses.includes(newId)) sel.spouses.push(newId);
       newMember.spouses.push(sel.id);
+      sel.spouse_unions = sel.spouse_unions || {};
+      newMember.spouse_unions = newMember.spouse_unions || {};
       sel.spouse_unions[newId] = unionType;
       newMember.spouse_unions[sel.id] = unionType;
     } else {
