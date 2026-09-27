@@ -51,7 +51,7 @@ cd family-tree-builder
 py -m pip install -r requirements.txt
 
 # 3. Run the app
-py -m streamlit run app.py
+py -m streamlit run streamlit_app.py
 ```
 Open [http://localhost:8501](http://localhost:8501) in your browser.
 
@@ -94,7 +94,7 @@ Your tree will be live on a ultra-fast, responsive `*.vercel.app` domain with ze
 2. Click **New app**.
 3. Select your repository: `harley-inciong/family-tree-builder`.
 4. Branch: `main`.
-5. Main file path: `app.py`.
+5. Main file path: `streamlit_app.py`.
 6. Click **Deploy!**
 
 ---
