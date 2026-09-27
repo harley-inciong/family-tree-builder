@@ -80,10 +80,26 @@ git remote add origin https://github.com/harley-inciong/family-tree-builder.git
 git push -u origin main
 ```
 
-### 3. Deploy Live for Free on Streamlit Cloud
+### 3. Deploy Instantly on Vercel (Recommended)
+Because Kinship is fully client-side and optimized with native D3.js:
+1. Go to [vercel.com](https://vercel.com) and log in with GitHub.
+2. Click **Add New...** -> **Project**.
+3. Import your **`family-tree-builder`** repository.
+4. Leave all build settings as default (Framework Preset: **Other**, Root Directory: `./`).
+5. Click **Deploy**!
+Your tree will be live on a ultra-fast, responsive `*.vercel.app` domain with zero iframes!
+
+### 4. Deploy on Streamlit Cloud (Alternative)
 1. Go to [share.streamlit.io](https://share.streamlit.io) and log in with your GitHub account.
 2. Click **New app**.
 3. Select your repository: `harley-inciong/family-tree-builder`.
 4. Branch: `main`.
 5. Main file path: `app.py`.
 6. Click **Deploy!**
+
+---
+
+## 💾 Backing Up & Migrating Your Family Tree Progress
+1. In the top toolbar, click **`💾 Backup JSON`** to instantly save your entire tree and members to a `.json` file on your computer.
+2. When switching devices or opening the app on Vercel, click **`📂 Restore JSON`** and pick your file. Your entire tree loads immediately!
+
