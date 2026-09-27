@@ -1192,6 +1192,70 @@
   }
 
   // ORDER ROOTS TO RESPECT PEDIGREE HIERARCHY (GEN 1 ROOTS: MATERNAL ON LEFT, PATERNAL ON RIGHT)
+  // Helper: recursively collect all ancestor IDs of a member
+  function getAllAncestorIds(mid, members) {
+    const ancestors = new Set();
+    const queue = [mid];
+    while (queue.length > 0) {
+      const curId = queue.shift();
+      const m = members[curId];
+      if (!m) continue;
+      (m.parents || []).forEach(pid => {
+        if (!ancestors.has(pid) && members[pid]) {
+          ancestors.add(pid);
+          queue.push(pid);
+        }
+      });
+    }
+    return ancestors;
+  }
+
+  // Precompute pedigree lineage scores: Maternal lineage receives negative scores (LEFT), Paternal positive (RIGHT)
+  function computeLineageScores(members, genRanks) {
+    const scores = {};
+    Object.keys(members).forEach(id => { scores[id] = 0; });
+
+    // Identify all heterosexual couples (mother & father)
+    const couples = [];
+    Object.values(members).forEach(m => {
+      if (m.gender === 'F') {
+        (m.spouses || []).forEach(spId => {
+          const sp = members[spId];
+          if (sp && sp.gender === 'M' && !couples.some(c => c.momId === m.id && c.dadId === spId)) {
+            couples.push({ momId: m.id, dadId: spId });
+          }
+        });
+      }
+      const vParents = (m.parents || []).filter(pid => members[pid]);
+      if (vParents.length >= 2) {
+        const mom = vParents.find(pid => members[pid].gender === 'F');
+        const dad = vParents.find(pid => members[pid].gender === 'M');
+        if (mom && dad && !couples.some(c => c.momId === mom && c.dadId === dad)) {
+          couples.push({ momId: mom, dadId: dad });
+        }
+      }
+    });
+
+    couples.forEach(({ momId, dadId }) => {
+      const cGen = Math.max(genRanks[momId] || 1, genRanks[dadId] || 1);
+      const weight = Math.pow(10, cGen + 1);
+      const momAncestors = getAllAncestorIds(momId, members);
+      momAncestors.add(momId);
+      const dadAncestors = getAllAncestorIds(dadId, members);
+      dadAncestors.add(dadId);
+
+      momAncestors.forEach(id => {
+        scores[id] = (scores[id] || 0) - weight;
+      });
+      dadAncestors.forEach(id => {
+        scores[id] = (scores[id] || 0) + weight;
+      });
+    });
+
+    return scores;
+  }
+
+  // ORDER ROOTS TO RESPECT PEDIGREE HIERARCHY (MATERNAL ON LEFT, PATERNAL ON RIGHT)
   function getOrderedRoots(visibleMembers, hiddenSet, genRanks) {
     const members = treeState.members || {};
     const gen1Roots = visibleMembers.filter(m => {
@@ -1199,12 +1263,13 @@
       return vParents.length === 0 && (genRanks[m.id] || 1) === 1;
     });
 
+    const lineageScores = computeLineageScores(members, genRanks);
+
     gen1Roots.sort((a, b) => {
-      if (a.gender === 'F' && b.gender !== 'F') return -1;
-      if (b.gender === 'F' && a.gender !== 'F') return 1;
-      if (a.gender !== 'M' && b.gender === 'M') return -1;
-      if (b.gender !== 'M' && a.gender === 'M') return 1;
-      return 0;
+      const scoreA = (lineageScores[a.id] || 0) + (a.gender === 'F' ? -1 : 1);
+      const scoreB = (lineageScores[b.id] || 0) + (b.gender === 'F' ? -1 : 1);
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return (a.first_name || "").localeCompare(b.first_name || "");
     });
 
     return gen1Roots;
@@ -1291,45 +1356,86 @@
       const y = (gen - 1) * (CARD_HEIGHT + Y_GAP) + 80;
 
       // Gather unit members: mid and in-law spouses
-      const unitMembers = [mid];
       const inLaws = getInLawSpouses(mid, visited);
-      inLaws.forEach(spId => {
-        unitMembers.push(spId);
-        visited.add(spId);
-      });
+      inLaws.forEach(spId => visited.add(spId));
 
-      // SORT UNIT:
-      // Maternal (Female) on LEFT, Paternal (Male) on RIGHT!
-      unitMembers.sort((idA, idB) => {
-        const a = members[idA];
-        const b = members[idB];
-        if (!a || !b) return 0;
-        if (a.gender === 'F' && b.gender !== 'F') return -1;
-        if (b.gender === 'F' && a.gender !== 'F') return 1;
-        if (a.gender !== 'M' && b.gender === 'M') return -1;
-        if (b.gender !== 'M' && a.gender === 'M') return 1;
-        return 0;
-      });
+      let unitMembers = [];
+      if (inLaws.length === 0) {
+        unitMembers = [mid];
+      } else if (inLaws.length === 1) {
+        const sp = members[inLaws[0]];
+        if (m.gender === 'F' && sp && sp.gender === 'M') {
+          unitMembers = [mid, inLaws[0]]; // Mother left, Father right
+        } else if (m.gender === 'M' && sp && sp.gender === 'F') {
+          unitMembers = [inLaws[0], mid]; // Mother left, Father right
+        } else {
+          unitMembers = [mid, inLaws[0]];
+        }
+      } else {
+        // MULTIPLE SPOUSES: Common member (mid) in the CENTER!
+        // Prevents marriage connectors from crossing through intermediate cards.
+        // Left spouses (e.g. spouse 1), Center (mid), Right spouses (e.g. spouse 2)
+        const half = Math.ceil(inLaws.length / 2);
+        const leftSpouses = inLaws.slice(0, half);
+        const rightSpouses = inLaws.slice(half);
+        unitMembers = [...leftSpouses, mid, ...rightSpouses];
+      }
 
       const unitCount = unitMembers.length;
       const unitW = unitCount * CARD_WIDTH + (unitCount - 1) * SPOUSE_GAP;
 
-      // Collect children
-      const allChildren = new Set();
-      unitMembers.forEach(id => {
-        (members[id].children || []).forEach(cid => allChildren.add(cid));
-      });
-      const validChildren = Array.from(allChildren).filter(cid => !hiddenSet.has(cid) && members[cid] && !placed.has(cid));
+      // Collect and partition children by spouse to keep sibling branches cleanly separated!
+      const validChildren = [];
+      const placedChildren = new Set();
 
-      // Sort children chronologically (oldest on left, youngest on right)
-      validChildren.sort((aId, bId) => {
-        const ca = members[aId];
-        const cb = members[bId];
-        const ya = parseInt(ca.birth_date) || 0;
-        const yb = parseInt(cb.birth_date) || 0;
-        if (ya && yb) return ya - yb;
-        return 0;
-      });
+      function addChildrenOfUnion(spId) {
+        const shared = (m.children || []).filter(cid => {
+          if (hiddenSet.has(cid) || !members[cid] || placed.has(cid) || placedChildren.has(cid)) return false;
+          const childObj = members[cid];
+          return (childObj.parents || []).includes(spId);
+        });
+        shared.sort((a, b) => {
+          const ya = parseInt(members[a].birth_date) || 0;
+          const yb = parseInt(members[b].birth_date) || 0;
+          if (ya && yb) return ya - yb;
+          return 0;
+        });
+        shared.forEach(cid => {
+          placedChildren.add(cid);
+          validChildren.push(cid);
+        });
+      }
+
+      if (inLaws.length >= 2) {
+        const half = Math.ceil(inLaws.length / 2);
+        const leftSpouses = inLaws.slice(0, half);
+        const rightSpouses = inLaws.slice(half);
+        leftSpouses.forEach(spId => addChildrenOfUnion(spId));
+        (m.children || []).forEach(cid => {
+          if (!placedChildren.has(cid) && !hiddenSet.has(cid) && members[cid] && !placed.has(cid)) {
+            placedChildren.add(cid);
+            validChildren.push(cid);
+          }
+        });
+        rightSpouses.forEach(spId => addChildrenOfUnion(spId));
+      } else if (inLaws.length === 1) {
+        addChildrenOfUnion(inLaws[0]);
+        (m.children || []).forEach(cid => {
+          if (!placedChildren.has(cid) && !hiddenSet.has(cid) && members[cid] && !placed.has(cid)) {
+            placedChildren.add(cid);
+            validChildren.push(cid);
+          }
+        });
+      } else {
+        const cList = (m.children || []).filter(cid => !hiddenSet.has(cid) && members[cid] && !placed.has(cid));
+        cList.sort((a, b) => {
+          const ya = parseInt(members[a].birth_date) || 0;
+          const yb = parseInt(members[b].birth_date) || 0;
+          if (ya && yb) return ya - yb;
+          return 0;
+        });
+        cList.forEach(cid => validChildren.push(cid));
+      }
 
       let childrenTotalW = 0;
       if (!m.is_collapsed && validChildren.length > 0) {
@@ -1382,49 +1488,6 @@
       }
     });
 
-    // STRICT PEDIGREE ENFORCEMENT: Mother ALWAYS on LEFT, Father ALWAYS on RIGHT in every generation
-    // 1. Spousal pairs
-    visibleMembers.forEach(m => {
-      (m.spouses || []).forEach(spId => {
-        if (!hiddenSet.has(spId) && members[spId] && nodePositions[m.id] && nodePositions[spId]) {
-          const sp = members[spId];
-          let motherId = null, fatherId = null;
-          if (m.gender === 'F' && sp.gender === 'M') {
-            motherId = m.id; fatherId = sp.id;
-          } else if (m.gender === 'M' && sp.gender === 'F') {
-            motherId = sp.id; fatherId = m.id;
-          }
-          if (motherId && fatherId) {
-            const posM = nodePositions[motherId];
-            const posF = nodePositions[fatherId];
-            if (posM && posF && posM.x > posF.x) {
-              const tempX = posM.x;
-              posM.x = posF.x;
-              posF.x = tempX;
-            }
-          }
-        }
-      });
-    });
-
-    // 2. Co-parent couples of children
-    visibleMembers.forEach(m => {
-      const vParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
-      if (vParents.length >= 2) {
-        const motherId = vParents.find(pid => members[pid] && members[pid].gender === 'F');
-        const fatherId = vParents.find(pid => members[pid] && members[pid].gender === 'M');
-        if (motherId && fatherId && nodePositions[motherId] && nodePositions[fatherId]) {
-          const posM = nodePositions[motherId];
-          const posF = nodePositions[fatherId];
-          if (posM && posF && posM.x > posF.x) {
-            const tempX = posM.x;
-            posM.x = posF.x;
-            posF.x = tempX;
-          }
-        }
-      }
-    });
-
     // RENDER GENERATIONAL GUIDES CONFINED TO ACTUAL TREE WIDTH
     const allX = Object.values(nodePositions).map(p => p.x);
     const minTreeX = allX.length > 0 ? Math.min(...allX) - 60 : 20;
@@ -1470,19 +1533,39 @@
             const strokeColor = isDivorced ? "#EF4444" : "#F59E0B";
             const strokeDash = isDivorced ? "4,3" : "6,3";
 
-            linksGroup.append("line")
-              .attr("class", "lineage-link marriage-link")
-              .attr("data-couple", coupleKey)
-              .attr("x1", x1)
-              .attr("y1", my)
-              .attr("x2", x2)
-              .attr("y2", my)
-              .attr("stroke", strokeColor)
-              .attr("stroke-width", "3.5")
-              .attr("stroke-dasharray", strokeDash)
-              .attr("fill", "none");
+            // If spouses are adjacent, connect directly in the gap.
+            // If separated by another spouse, use an arched overhead bridge to never collide with intermediate cards!
+            const isAdjacent = Math.abs(pos2.x - pos1.x) <= (CARD_WIDTH + SPOUSE_GAP + 25);
+            if (isAdjacent) {
+              linksGroup.append("line")
+                .attr("class", "lineage-link marriage-link")
+                .attr("data-couple", coupleKey)
+                .attr("x1", x1)
+                .attr("y1", my)
+                .attr("x2", x2)
+                .attr("y2", my)
+                .attr("stroke", strokeColor)
+                .attr("stroke-width", "3.5")
+                .attr("stroke-dasharray", strokeDash)
+                .attr("fill", "none");
+            } else {
+              const startArcX = pos1.x < pos2.x ? pos1.x + CARD_WIDTH * 0.75 : pos1.x + CARD_WIDTH * 0.25;
+              const endArcX = pos1.x < pos2.x ? pos2.x + CARD_WIDTH * 0.25 : pos2.x + CARD_WIDTH * 0.75;
+              const arcY = my - 34;
+              const pathD = `M ${startArcX} ${my} C ${startArcX} ${arcY}, ${endArcX} ${arcY}, ${endArcX} ${my}`;
+              linksGroup.append("path")
+                .attr("class", "lineage-link marriage-link")
+                .attr("data-couple", coupleKey)
+                .attr("d", pathD)
+                .attr("stroke", strokeColor)
+                .attr("stroke-width", "3")
+                .attr("stroke-dasharray", strokeDash)
+                .attr("fill", "none");
+            }
 
-            const midX = (x1 + x2) / 2;
+            const midX = isAdjacent ? (x1 + x2) / 2 : (pos1.x + pos2.x + CARD_WIDTH) / 2;
+            const midY = isAdjacent ? (my - 6) : (my - 38);
+
             let symbolIcon = "💍";
             if (unionType === 'divorced') symbolIcon = "≠";
             else if (unionType === 'partners') symbolIcon = "🤝";
@@ -1491,7 +1574,7 @@
               .attr("class", "marriage-icon")
               .attr("data-couple", coupleKey)
               .attr("x", midX)
-              .attr("y", my - 6)
+              .attr("y", midY)
               .attr("text-anchor", "middle")
               .attr("font-size", isDivorced ? "16px" : "13px")
               .attr("font-weight", isDivorced ? "800" : "400")
