@@ -1382,6 +1382,49 @@
       }
     });
 
+    // STRICT PEDIGREE ENFORCEMENT: Mother ALWAYS on LEFT, Father ALWAYS on RIGHT in every generation
+    // 1. Spousal pairs
+    visibleMembers.forEach(m => {
+      (m.spouses || []).forEach(spId => {
+        if (!hiddenSet.has(spId) && members[spId] && nodePositions[m.id] && nodePositions[spId]) {
+          const sp = members[spId];
+          let motherId = null, fatherId = null;
+          if (m.gender === 'F' && sp.gender === 'M') {
+            motherId = m.id; fatherId = sp.id;
+          } else if (m.gender === 'M' && sp.gender === 'F') {
+            motherId = sp.id; fatherId = m.id;
+          }
+          if (motherId && fatherId) {
+            const posM = nodePositions[motherId];
+            const posF = nodePositions[fatherId];
+            if (posM && posF && posM.x > posF.x) {
+              const tempX = posM.x;
+              posM.x = posF.x;
+              posF.x = tempX;
+            }
+          }
+        }
+      });
+    });
+
+    // 2. Co-parent couples of children
+    visibleMembers.forEach(m => {
+      const vParents = (m.parents || []).filter(pid => !hiddenSet.has(pid) && members[pid]);
+      if (vParents.length >= 2) {
+        const motherId = vParents.find(pid => members[pid] && members[pid].gender === 'F');
+        const fatherId = vParents.find(pid => members[pid] && members[pid].gender === 'M');
+        if (motherId && fatherId && nodePositions[motherId] && nodePositions[fatherId]) {
+          const posM = nodePositions[motherId];
+          const posF = nodePositions[fatherId];
+          if (posM && posF && posM.x > posF.x) {
+            const tempX = posM.x;
+            posM.x = posF.x;
+            posF.x = tempX;
+          }
+        }
+      }
+    });
+
     // RENDER GENERATIONAL GUIDES CONFINED TO ACTUAL TREE WIDTH
     const allX = Object.values(nodePositions).map(p => p.x);
     const minTreeX = allX.length > 0 ? Math.min(...allX) - 60 : 20;
